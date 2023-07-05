@@ -1,0 +1,23 @@
+order,family,flower_type,symmetry,tepals,calyx,petals,anthers,carpels,ovary,fruit,adnation
+Amborellales,amborellaceae,s,s,8-11,-,-,inf,0,-,-,-
+Amborellales,amborellaceae,c,s,5-8,-,-,1-2s,5-6,s,drupes,-
+Nympheales,nymphaceae,b,r,-,4-12;f;v,8-inf,inf,5-inf;f,i;s,berry,-
+Nympheales,cabombaceae,b,r,6,-,-,3-inf,3-inf,s,aggregate of nuts,-
+Austrobaileyales,illiciaceae,b,s,5-inf,-,-,4-inf;f,7-inf,s,follicles;berries,-
+Magnoliales,magnoliaceae,b,r,6-inf,-,-,inf,inf,s,follicles;samaras,-
+Magnoliales,annonaceae,b,r,-,3,6,inf,3-inf;f;v,s,berries,-
+Magnoliales,myristicaceae,s,r,3,-,-,2-inf;f,0,-,-,-
+Magnoliales,myristicaceae,c,r,3,-,-,0,1,s,"fleshy ""capsule""",-
+Laurales,lauraceae,b,r,6;f;v,-,-,3-12;3-12s,1,s,drupe,-
+Laurales,calycanthaceae,b,s,15-40,-,-,5-30;infs,1-inf;f,s,capsule;berry,-
+Laurales,hernandiaceae,s,r,6,-,-,3;3s,0,-,-,-
+Laurales,hernandiaceae,c,r,8,-,-,4s,1,i,drupe;berries,-
+Laurales,atherospermataceae,s,s,4-9,-,-,7-13,0,-,-,-
+Laurales,atherospermataceae,c,s,5-9,-,-,0-6;13-24s,8-12,s,achene,-
+Laurales,monimiaceae,s,r,0-inf,-,-,9-inf,0,-,-,-
+Laurales,monimiaceae,c,s,0-inf,-,-,0,1-inf,s,drupelets;berrylets,-
+Canellales,winteraceae,b,r,-,2-4;f;v,5-inf,inf,1-inf,s,berries;follicles,-
+Canellales,canellaceae,b,r,-,3,5-12,6-inf;f,2-6;f,s,berries;follicles,-
+Piperales,aristolochiaceae,b,r;down,-,3-4;f,0-3,6-46,3-6;f;v,s;i,capsule,A;G;v
+Piperales,saururaceae,b,d;r;down,0,-,-,3-6,3-5,i,capsule,-
+Piperales,piperaceae,b,r,0,-,-,1-10,1-4;f,s,drupe,-
