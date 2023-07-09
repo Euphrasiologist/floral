@@ -148,11 +148,9 @@ impl FromStr for Symmetry {
             "a" => Ok(Self::Asymmetry),
             "s" => Ok(Self::Spiral),
             "d" => Ok(Self::Disymmetric),
-            _ => {
-                return Err(Error::new(ErrorKind::FromStr(
-                    "Some other error in parsing the symmetry".into(),
-                )))
-            }
+            _ => Err(Error::new(ErrorKind::FromStr(
+                "Some other error in parsing the symmetry".into(),
+            ))),
         }
     }
 }
@@ -200,19 +198,10 @@ impl Display for FloralPartNumber {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Adnation {
     variation: bool,
     parts: Option<Vec<Part>>,
-}
-
-impl Default for Adnation {
-    fn default() -> Self {
-        Self {
-            variation: false,
-            parts: None,
-        }
-    }
 }
 
 impl Adnation {
@@ -223,7 +212,9 @@ impl Adnation {
         if self.parts.is_none() {
             self.parts = Some(vec![]);
         }
-        self.parts.as_mut().map(|e| e.push(part));
+        if let Some(e) = self.parts.as_mut() {
+            e.push(part)
+        }
     }
 }
 
@@ -245,7 +236,7 @@ pub struct Formula {
     /// Ovary
     ovary: Option<Ovary>,
     /// Fruit
-    fruit: Option<Vec<Fruit>>,
+    fruit: Vec<Fruit>,
     /// Where is the adnation present?
     adnation: Adnation,
 }
@@ -259,7 +250,7 @@ impl Formula {
         stamens: Option<FloralPart>,
         carpels: Option<FloralPart>,
         ovary: Option<Ovary>,
-        fruit: Option<Vec<Fruit>>,
+        fruit: Vec<Fruit>,
         adnation: Adnation,
     ) -> Self {
         Self {
@@ -276,25 +267,13 @@ impl Formula {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct AdnationIndex {
     tepals: Option<usize>,
     sepals: Option<usize>,
     petals: Option<usize>,
     stamens: Option<usize>,
     carpels: Option<usize>,
-}
-
-impl Default for AdnationIndex {
-    fn default() -> Self {
-        Self {
-            tepals: None,
-            sepals: None,
-            petals: None,
-            stamens: None,
-            carpels: None,
-        }
-    }
 }
 
 // this is the trait which will display the adnation
@@ -309,7 +288,7 @@ impl Display for AdnationIndex {
             self.stamens,
             self.carpels,
         ];
-
+        // TODO: these should be ordered already... but maybe check this?
         let merged_only_some: Vec<_> = merged.into_iter().flatten().collect();
 
         match merged_only_some.len() {
@@ -327,14 +306,46 @@ impl Display for AdnationIndex {
                 adnation.push('╯');
                 write!(f, "{}", adnation)
             }
-            3.. => {
-                write!(f, "")
+            fusions @ 3.. => {
+                // three or more adnations, fancy
+                let mut adnation = String::new();
+                let mut adnation_iter = (0..fusions).peekable();
+
+                while let Some(fusion) = adnation_iter.next() {
+                    // if we are on the first iteration
+                    if fusion == 0 {
+                        // we want spaces up until this point.
+                        for _ in 0..merged_only_some[fusion] {
+                            adnation.push(' ');
+                        }
+                        adnation.push('╰');
+                        // and continue to next loop iteration
+                        continue;
+                    }
+
+                    // dashes in between
+                    for _ in merged_only_some[fusion - 1]..merged_only_some[fusion] - 1 {
+                        adnation.push('─');
+                    }
+
+                    // and we close on the last iteration
+                    if adnation_iter.peek().is_none() {
+                        adnation.push('╯');
+                        // just to be sure.
+                        break;
+                    }
+                    // and if we are in between iterations,
+                    // we want this funky char
+                    adnation.push('┴');
+                }
+                write!(f, "{}", adnation)
             }
             _ => return Err(fmt::Error),
         }
     }
 }
 
+// TODO: remove the println!() statements
 impl Display for Formula {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let sym = &self
@@ -423,28 +434,24 @@ impl Display for Formula {
             "".into()
         };
 
-        let fruit = if let Some(f) = &self.fruit {
-            let fruits = f
-                .iter()
-                .map(|e| e.to_string())
-                .collect::<Vec<String>>()
-                .join(",");
-            format!(";{}", fruits)
-        } else {
-            "".into()
-        };
-
+        let fruits = &self
+            .fruit
+            .iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+        let fruit_string = format!(";{}", fruits);
         let adnation_string = if adnation_status.to_string().is_empty() {
             "".to_string()
         } else {
-            format!("\n{}", adnation_status.to_string())
+            format!("\n{}", adnation_status)
         };
 
         println!("{:?}", adnation_status);
         write!(
             f,
             "{}{}{}{}{}{}",
-            sym, calyx_perianth_or_tepals, anthers, carpels, fruit, adnation_string
+            sym, calyx_perianth_or_tepals, anthers, carpels, fruit_string, adnation_string
         )
     }
 }
@@ -534,8 +541,10 @@ pub enum Fruit {
     Schizocarp,
     Silique,
     Utricle,
+    None,
 }
 
+// TODO: the fruit collection needs to be bigger, e.g. drupelets, berrylets...
 impl Display for Fruit {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -555,6 +564,37 @@ impl Display for Fruit {
             Fruit::Schizocarp => write!(f, "schizocarp"),
             Fruit::Silique => write!(f, "silique"),
             Fruit::Utricle => write!(f, "utricle"),
+            Fruit::None => write!(f, "no fruit"),
+        }
+    }
+}
+
+impl FromStr for Fruit {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "achene" => Ok(Self::Achene),
+            "berry" => Ok(Self::Berry),
+            "capsule" => Ok(Self::Capsule),
+            "caryopsis" => Ok(Self::Caryopsis),
+            "dehiscent drupe" => Ok(Self::DDrupe),
+            "drupe" => Ok(Self::Drupe),
+            "follicle" => Ok(Self::Follicle),
+            "indehiscent pod" => Ok(Self::IPod),
+            "legume" => Ok(Self::Legume),
+            "loment" => Ok(Self::Loment),
+            "nut" => Ok(Self::Nut),
+            "pome" => Ok(Self::Pome),
+            "samara" => Ok(Self::Samara),
+            "schizocarp" => Ok(Self::Schizocarp),
+            "silique" => Ok(Self::Silique),
+            "utricle" => Ok(Self::Utricle),
+            "-" | "" => Ok(Self::None),
+            other => Err(Error::new(ErrorKind::FromStr(format!(
+                "fruit: {}, not recognised",
+                other
+            )))),
         }
     }
 }

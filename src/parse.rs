@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 // the data from our assets folder.
-pub const DATA: &'static str = include_str!("../assets/formulae.csv");
+pub const DATA: &str = include_str!("../assets/formulae.csv");
 
 // function to parse the data into a map
 pub fn parse_data<'a>() -> Result<HashMap<&'a str, (FlowerType, Formula)>> {
@@ -56,7 +56,12 @@ fn floral_from_str(
 
     // parse the adnation
     let parsed_adnation = parse_adnation(adnation)?;
-    // parse_ovary/parse_fruit/parse_adnation
+    let parsed_fruit = {
+        let sp = fruit.split(';').collect::<Vec<&str>>();
+        let fruits: Result<Vec<_>> = sp.iter().map(|e| Fruit::from_str(e)).collect();
+        fruits?
+    };
+    // parse_ovary/parse_fruit
     Ok(Formula::new(
         parsed_sym,
         parsed_tepals,
@@ -65,14 +70,15 @@ fn floral_from_str(
         parsed_anthers,
         parsed_carpels,
         None,
-        None,
+        // parsed_fruit,
+        parsed_fruit,
         parsed_adnation,
     ))
 }
 
 fn parse_adnation(s: &str) -> Result<Adnation> {
-    if s == "-" {
-        return Ok(Adnation::default());
+    if s.is_empty() || s == "-" {
+        Ok(Adnation::default())
     } else {
         let mut adnation = Adnation::default();
         let sp = s.split(';').collect::<Vec<&str>>();
@@ -93,7 +99,7 @@ fn parse_adnation(s: &str) -> Result<Adnation> {
 }
 
 fn parse_floral_part_to_enum(s: &str, floral_part: Part) -> Result<Option<FloralPart>> {
-    if s == "" || s == "-" {
+    if s.is_empty() || s == "-" {
         return Ok(None);
     }
 
@@ -122,6 +128,7 @@ fn parse_floral_part_to_enum(s: &str, floral_part: Part) -> Result<Option<Floral
                 floral.add_whorl(Whorl::new(None, Some(min), Some(max), Sterile::Fertile));
             }
         } else if el == "f" {
+            // f == fused
             floral.set_connation(true);
             // deal with f/v, and numbers last.
             // we got a number
