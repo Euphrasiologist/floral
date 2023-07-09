@@ -4,17 +4,16 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 // the data from our assets folder.
-const DATA: &'static str = include_str!("../assets/formulae.csv");
+pub const DATA: &'static str = include_str!("../assets/formulae.csv");
 
 // function to parse the data into a map
-pub fn parse_data(data: &'static str) -> Result<()> {
-    let lines = data.lines().skip(1);
+pub fn parse_data<'a>() -> Result<HashMap<&'a str, (FlowerType, Formula)>> {
+    let lines = DATA.lines().skip(1);
+    let mut data_map = HashMap::new();
     for line in lines {
         // this is technically a csv parser, but I don't really want the overhead of a
         // fully blown csv parser yet (e.g. csv crate)
         let line_elements = line.split(',').collect::<Vec<&str>>();
-
-        let mut data_map = HashMap::new();
 
         if let [order, family, flower_type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation] =
             &line_elements[..]
@@ -23,11 +22,10 @@ pub fn parse_data(data: &'static str) -> Result<()> {
                 symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation,
             )?;
             let ft = FlowerType::from_str(flower_type)?;
-            println!("{family} {ft} {floral}");
-            data_map.insert(family, (ft, floral));
+            data_map.insert(*family, (ft, floral));
         }
     }
-    Ok(())
+    Ok(data_map)
 }
 
 // here we do the heavy lifting parsing the csv
@@ -56,6 +54,8 @@ fn floral_from_str(
     let parsed_anthers = parse_floral_part_to_enum(anthers, Part::Stamens)?;
     let parsed_carpels = parse_floral_part_to_enum(carpels, Part::Carpels)?;
 
+    // parse the adnation
+    let parsed_adnation = parse_adnation(adnation)?;
     // parse_ovary/parse_fruit/parse_adnation
     Ok(Formula::new(
         parsed_sym,
@@ -66,8 +66,30 @@ fn floral_from_str(
         parsed_carpels,
         None,
         None,
-        None,
+        parsed_adnation,
     ))
+}
+
+fn parse_adnation(s: &str) -> Result<Adnation> {
+    if s == "-" {
+        return Ok(Adnation::default());
+    } else {
+        let mut adnation = Adnation::default();
+        let sp = s.split(';').collect::<Vec<&str>>();
+
+        for el in sp {
+            if el == "v" {
+                // it's variable adnation
+                adnation.set_variation(true);
+            } else {
+                // it's a floral part
+                let part = Part::from_str(el)?;
+                adnation.add_part(part);
+            }
+        }
+        println!("{:?}", adnation);
+        Ok(adnation)
+    }
 }
 
 fn parse_floral_part_to_enum(s: &str, floral_part: Part) -> Result<Option<FloralPart>> {

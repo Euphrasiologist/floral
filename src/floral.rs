@@ -4,11 +4,28 @@ use std::str::FromStr;
 
 use crate::error::{Error, ErrorKind};
 
+/// If the user wants an explanation of the floral parts
+trait ExplainFloralFormula {
+    fn explain(&self) -> String;
+}
+
 /// The type of flower we're looking at
 pub enum FlowerType {
     Bisexual,
     Carpellate,
     Staminate,
+}
+
+impl ExplainFloralFormula for FlowerType {
+    fn explain(&self) -> String {
+        let flower_type = match self {
+            FlowerType::Bisexual => "bisexual",
+            FlowerType::Carpellate => "carpellate",
+            FlowerType::Staminate => "staminate",
+        };
+
+        format!("A {} flower", flower_type)
+    }
 }
 
 impl Display for FlowerType {
@@ -166,12 +183,10 @@ impl FromStr for FloralPartNumber {
             Err(err) => return Err(Error::new(ErrorKind::ParseInt(err))),
         };
 
+        // TODO: is this right?
         match num {
             0..=30 => Ok(FloralPartNumber::Finite(num)),
             31.. => Ok(FloralPartNumber::Infinite),
-            _ => Err(Error::new(ErrorKind::FromStr(
-                "Could not parse floral part number into a u32.".into(),
-            ))),
         }
     }
 }
@@ -182,6 +197,33 @@ impl Display for FloralPartNumber {
             FloralPartNumber::Finite(u) => write!(f, "{}", u),
             FloralPartNumber::Infinite => write!(f, "∞"),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Adnation {
+    variation: bool,
+    parts: Option<Vec<Part>>,
+}
+
+impl Default for Adnation {
+    fn default() -> Self {
+        Self {
+            variation: false,
+            parts: None,
+        }
+    }
+}
+
+impl Adnation {
+    pub fn set_variation(&mut self, variation: bool) {
+        self.variation = variation;
+    }
+    pub fn add_part(&mut self, part: Part) {
+        if self.parts.is_none() {
+            self.parts = Some(vec![]);
+        }
+        self.parts.as_mut().map(|e| e.push(part));
     }
 }
 
@@ -205,7 +247,7 @@ pub struct Formula {
     /// Fruit
     fruit: Option<Vec<Fruit>>,
     /// Where is the adnation present?
-    adnation: Option<Vec<Part>>,
+    adnation: Adnation,
 }
 
 impl Formula {
@@ -218,7 +260,7 @@ impl Formula {
         carpels: Option<FloralPart>,
         ovary: Option<Ovary>,
         fruit: Option<Vec<Fruit>>,
-        adnation: Option<Vec<Part>>,
+        adnation: Adnation,
     ) -> Self {
         Self {
             symmetry,
@@ -234,6 +276,65 @@ impl Formula {
     }
 }
 
+#[derive(Debug)]
+struct AdnationIndex {
+    tepals: Option<usize>,
+    sepals: Option<usize>,
+    petals: Option<usize>,
+    stamens: Option<usize>,
+    carpels: Option<usize>,
+}
+
+impl Default for AdnationIndex {
+    fn default() -> Self {
+        Self {
+            tepals: None,
+            sepals: None,
+            petals: None,
+            stamens: None,
+            carpels: None,
+        }
+    }
+}
+
+// this is the trait which will display the adnation
+// between floral parts as table unicode chars
+impl Display for AdnationIndex {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // merge into a vec
+        let merged = vec![
+            self.tepals,
+            self.sepals,
+            self.petals,
+            self.stamens,
+            self.carpels,
+        ];
+
+        let merged_only_some: Vec<_> = merged.into_iter().flatten().collect();
+
+        match merged_only_some.len() {
+            0 | 1 => write!(f, ""), // nothing to do
+            2 => {
+                // link between two elements
+                let mut adnation = String::new();
+                for _ in 0..merged_only_some[0] {
+                    adnation.push(' ');
+                }
+                adnation.push('╰');
+                for _ in merged_only_some[0]..merged_only_some[1] - 1 {
+                    adnation.push('─');
+                }
+                adnation.push('╯');
+                write!(f, "{}", adnation)
+            }
+            3.. => {
+                write!(f, "")
+            }
+            _ => return Err(fmt::Error),
+        }
+    }
+}
+
 impl Display for Formula {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let sym = &self
@@ -243,25 +344,81 @@ impl Display for Formula {
             .collect::<Vec<String>>()
             .join(" or ");
 
+        // we start the index at wherever the symmetry ends
+        // plus one for comma in first element
+        let mut format_index = sym.chars().count() + 1;
+        println!("Format index at start: {}", format_index);
+
+        let adnation_vec = self.adnation.parts.clone().unwrap_or(vec![]);
+        let mut adnation_status = AdnationIndex::default();
+
         let calyx_perianth_or_tepals = if let Some(t) = &self.tepals {
             // calyx and petals not needed
             // probably make this into a proper error.
             assert!(self.sepals.is_none() && self.petals.is_none());
-            format!(",{}", t)
+            // check if tepals are in the adnation vec.
+            if adnation_vec.contains(&Part::Tepals) {
+                adnation_status.tepals = Some(format_index);
+            }
+            println!("Format index at tepals: {}", format_index);
+            // the tepal string to return
+            let tepal_string = format!(",{}", t);
+            println!("tepal string length: {}", tepal_string.chars().count());
+            // increment the format index
+            format_index += tepal_string.chars().count();
+            tepal_string
         } else {
-            let calyx = self.sepals.as_ref().unwrap();
-            let petals = self.petals.as_ref().unwrap();
-            format!(",{},{}", calyx, petals)
+            // these unwraps are safe.
+            let calyx = self.sepals.as_ref().unwrap().to_string();
+            let petals = self.petals.as_ref().unwrap().to_string();
+            // make calyx string here
+            let calyx_string = format!(",{}", calyx);
+            let petals_string = format!(",{}", petals);
+
+            // deal with adnation logic here
+            if adnation_vec.contains(&Part::Calyx) {
+                adnation_status.sepals = Some(format_index);
+            }
+            println!("Format index at sepals: {}", format_index);
+            println!("Sepal string length: {}", calyx_string.chars().count());
+            // increment the format index
+            format_index += calyx_string.chars().count();
+            if adnation_vec.contains(&Part::Petals) {
+                adnation_status.petals = Some(format_index);
+            }
+            println!("Format index at petals: {}", format_index);
+            println!("Petal string length: {}", petals_string.chars().count());
+            // increment the format index again
+            format_index += petals_string.chars().count();
+            format!("{}{}", calyx_string, petals_string)
         };
 
         let anthers = if let Some(a) = &self.stamens {
-            format!(",{}", a)
+            let anthers_string = format!(",{}", a);
+
+            if adnation_vec.contains(&Part::Stamens) {
+                adnation_status.stamens = Some(format_index);
+            }
+            println!("Format index at stamens: {}", format_index);
+            println!("Anther string length: {}", anthers_string.chars().count());
+            format_index += anthers_string.chars().count();
+
+            anthers_string
         } else {
             "".into()
         };
 
         let carpels = if let Some(c) = &self.carpels {
-            format!(",{}", c)
+            let carpels_string = format!(",{}", c);
+
+            if adnation_vec.contains(&Part::Carpels) {
+                adnation_status.carpels = Some(format_index);
+            }
+            println!("Format index at carpels: {}", format_index);
+            println!("carpels string length: {}", carpels_string.chars().count());
+            format_index += carpels_string.chars().count();
+
+            carpels_string
         } else {
             "".into()
         };
@@ -277,10 +434,17 @@ impl Display for Formula {
             "".into()
         };
 
+        let adnation_string = if adnation_status.to_string().is_empty() {
+            "".to_string()
+        } else {
+            format!("\n{}", adnation_status.to_string())
+        };
+
+        println!("{:?}", adnation_status);
         write!(
             f,
-            "{}{}{}{}{}",
-            sym, calyx_perianth_or_tepals, anthers, carpels, fruit
+            "{}{}{}{}{}{}",
+            sym, calyx_perianth_or_tepals, anthers, carpels, fruit, adnation_string
         )
     }
 }
@@ -296,13 +460,31 @@ pub enum Ovary {
 
 /// The part of the flower, which
 /// occurs as a whorl.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Part {
     Tepals,
     Calyx,
     Petals,
     Stamens,
     Carpels,
+}
+
+impl FromStr for Part {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "T" => Ok(Self::Tepals),
+            "K" => Ok(Self::Calyx),
+            "C" => Ok(Self::Petals),
+            "A" => Ok(Self::Stamens),
+            "G" => Ok(Self::Carpels),
+            err => Err(Error::new(ErrorKind::FromStr(format!(
+                "The input string: {} - is not recognised",
+                err
+            )))),
+        }
+    }
 }
 
 impl Display for Part {
