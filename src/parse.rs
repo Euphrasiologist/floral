@@ -8,6 +8,7 @@ pub const DATA: &str = include_str!("../assets/formulae.csv");
 
 // function to parse the data into a map
 pub fn parse_data<'a>() -> Result<HashMap<&'a str, (FlowerType, Formula)>> {
+    // skip headers
     let lines = DATA.lines().skip(1);
     let mut data_map = HashMap::new();
     for line in lines {
@@ -54,26 +55,29 @@ fn floral_from_str(
     let parsed_anthers = parse_floral_part_to_enum(anthers, Part::Stamens)?;
     let parsed_carpels = parse_floral_part_to_enum(carpels, Part::Carpels)?;
 
-    // parse the adnation
+    // parse the rest
+    // let parsed_ovary =
     let parsed_adnation = parse_adnation(adnation)?;
     let parsed_fruit = {
         let sp = fruit.split(';').collect::<Vec<&str>>();
         let fruits: Result<Vec<_>> = sp.iter().map(|e| Fruit::from_str(e)).collect();
         fruits?
     };
-    // parse_ovary/parse_fruit
-    Ok(Formula::new(
-        parsed_sym,
-        parsed_tepals,
-        parsed_calyx,
-        parsed_petals,
-        parsed_anthers,
-        parsed_carpels,
-        None,
-        // parsed_fruit,
-        parsed_fruit,
-        parsed_adnation,
-    ))
+
+    let formula = Formula::default()
+        .with_symmetry(parsed_sym)
+        .with_tepals(parsed_tepals)
+        .with_sepals(parsed_calyx)
+        .with_petals(parsed_petals)
+        .with_stamens(parsed_anthers)
+        .with_carpels(parsed_carpels)
+        // TODO, ovary!
+        .with_ovary(None)
+        .with_fruit(parsed_fruit)
+        .with_adnation(parsed_adnation)
+        .build();
+
+    Ok(formula)
 }
 
 fn parse_adnation(s: &str) -> Result<Adnation> {
@@ -93,7 +97,6 @@ fn parse_adnation(s: &str) -> Result<Adnation> {
                 adnation.add_part(part);
             }
         }
-        println!("{:?}", adnation);
         Ok(adnation)
     }
 }

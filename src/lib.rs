@@ -7,8 +7,10 @@ pub mod parse;
 pub fn parse_cli() -> Result<()> {
     let data = parse::parse_data()?;
 
-    for (_, (_, formula)) in data {
-        println!("{}", formula);
+    for (family, (ft, formula)) in data {
+        // misses out carpellate/pistillate flowers separately like this...
+        let formatted = format!("{family}\n{ft}\n{formula}");
+        println!("{}", formatted);
     }
     Ok(())
 }

@@ -219,7 +219,7 @@ impl Adnation {
 }
 
 /// The total floral formula
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Formula {
     /// Floral symmetry
     symmetry: Vec<Symmetry>,
@@ -242,38 +242,77 @@ pub struct Formula {
 }
 
 impl Formula {
-    pub fn new(
-        symmetry: Vec<Symmetry>,
-        tepals: Option<FloralPart>,
-        sepals: Option<FloralPart>,
-        petals: Option<FloralPart>,
-        stamens: Option<FloralPart>,
-        carpels: Option<FloralPart>,
-        ovary: Option<Ovary>,
-        fruit: Vec<Fruit>,
-        adnation: Adnation,
-    ) -> Self {
-        Self {
-            symmetry,
-            tepals,
-            sepals,
-            petals,
-            stamens,
-            carpels,
-            ovary,
-            fruit,
-            adnation,
+    pub fn with_symmetry(mut self, symmetry: Vec<Symmetry>) -> Formula {
+        self.symmetry = symmetry;
+        self
+    }
+    pub fn with_tepals(mut self, tepals: Option<FloralPart>) -> Formula {
+        self.tepals = tepals;
+        self
+    }
+    pub fn with_sepals(mut self, sepals: Option<FloralPart>) -> Formula {
+        self.sepals = sepals;
+        self
+    }
+    pub fn with_petals(mut self, petals: Option<FloralPart>) -> Formula {
+        self.petals = petals;
+        self
+    }
+    pub fn with_stamens(mut self, stamens: Option<FloralPart>) -> Formula {
+        self.stamens = stamens;
+        self
+    }
+    pub fn with_carpels(mut self, carpels: Option<FloralPart>) -> Formula {
+        self.carpels = carpels;
+        self
+    }
+    pub fn with_ovary(mut self, ovary: Option<Ovary>) -> Formula {
+        self.ovary = ovary;
+        self
+    }
+    pub fn with_fruit(mut self, fruit: Vec<Fruit>) -> Formula {
+        self.fruit = fruit;
+        self
+    }
+    pub fn with_adnation(mut self, adnation: Adnation) -> Formula {
+        self.adnation = adnation;
+        self
+    }
+    pub fn build(self) -> Formula {
+        Formula {
+            symmetry: self.symmetry,
+            tepals: self.tepals,
+            sepals: self.sepals,
+            petals: self.petals,
+            stamens: self.stamens,
+            carpels: self.carpels,
+            ovary: self.ovary,
+            fruit: self.fruit,
+            adnation: self.adnation,
         }
     }
 }
 
 #[derive(Debug, Default)]
 struct AdnationIndex {
+    // need variation information here.
+    variation: bool,
     tepals: Option<usize>,
     sepals: Option<usize>,
     petals: Option<usize>,
     stamens: Option<usize>,
     carpels: Option<usize>,
+}
+
+trait AdnationVariation {
+    const CONSTANT: [char; 4];
+    const VARIABLE: [char; 4];
+}
+
+impl AdnationVariation for AdnationIndex {
+    const CONSTANT: [char; 4] = ['╰', '╯', '─', '┴'];
+
+    const VARIABLE: [char; 4] = ['└', '┘', '┄', '┴'];
 }
 
 // this is the trait which will display the adnation
@@ -288,6 +327,12 @@ impl Display for AdnationIndex {
             self.stamens,
             self.carpels,
         ];
+        // get the character set for the andation variation drawing
+        let character_set = if self.variation {
+            Self::VARIABLE
+        } else {
+            Self::CONSTANT
+        };
         // TODO: these should be ordered already... but maybe check this?
         let merged_only_some: Vec<_> = merged.into_iter().flatten().collect();
 
@@ -299,11 +344,11 @@ impl Display for AdnationIndex {
                 for _ in 0..merged_only_some[0] {
                     adnation.push(' ');
                 }
-                adnation.push('╰');
+                adnation.push(character_set[0]);
                 for _ in merged_only_some[0]..merged_only_some[1] - 1 {
-                    adnation.push('─');
+                    adnation.push(character_set[2]);
                 }
-                adnation.push('╯');
+                adnation.push(character_set[1]);
                 write!(f, "{}", adnation)
             }
             fusions @ 3.. => {
@@ -318,34 +363,33 @@ impl Display for AdnationIndex {
                         for _ in 0..merged_only_some[fusion] {
                             adnation.push(' ');
                         }
-                        adnation.push('╰');
+                        adnation.push(character_set[0]);
                         // and continue to next loop iteration
                         continue;
                     }
 
                     // dashes in between
                     for _ in merged_only_some[fusion - 1]..merged_only_some[fusion] - 1 {
-                        adnation.push('─');
+                        adnation.push(character_set[2]);
                     }
 
                     // and we close on the last iteration
                     if adnation_iter.peek().is_none() {
-                        adnation.push('╯');
+                        adnation.push(character_set[1]);
                         // just to be sure.
                         break;
                     }
                     // and if we are in between iterations,
                     // we want this funky char
-                    adnation.push('┴');
+                    adnation.push(character_set[3]);
                 }
                 write!(f, "{}", adnation)
             }
-            _ => return Err(fmt::Error),
+            _ => Err(fmt::Error),
         }
     }
 }
 
-// TODO: remove the println!() statements
 impl Display for Formula {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let sym = &self
@@ -358,10 +402,15 @@ impl Display for Formula {
         // we start the index at wherever the symmetry ends
         // plus one for comma in first element
         let mut format_index = sym.chars().count() + 1;
-        println!("Format index at start: {}", format_index);
 
         let adnation_vec = self.adnation.parts.clone().unwrap_or(vec![]);
         let mut adnation_status = AdnationIndex::default();
+        // set the adnation status. This is a really horrible way
+        // of handing that info on, but oh well.
+        if self.adnation.variation {
+            // we know that there is adnation
+            adnation_status.variation = true;
+        }
 
         let calyx_perianth_or_tepals = if let Some(t) = &self.tepals {
             // calyx and petals not needed
@@ -369,36 +418,54 @@ impl Display for Formula {
             assert!(self.sepals.is_none() && self.petals.is_none());
             // check if tepals are in the adnation vec.
             if adnation_vec.contains(&Part::Tepals) {
-                adnation_status.tepals = Some(format_index);
+                // if there is connation, there's an extra parenthesis
+                // we have to account for.
+                // same for other floral parts.
+                if t.connate {
+                    // so we add one to the index
+                    format_index += 1;
+                    // assign to the adnation status
+                    adnation_status.tepals = Some(format_index);
+                    // then decrement the index again
+                    format_index -= 1;
+                } else {
+                    adnation_status.tepals = Some(format_index);
+                }
             }
-            println!("Format index at tepals: {}", format_index);
             // the tepal string to return
             let tepal_string = format!(",{}", t);
-            println!("tepal string length: {}", tepal_string.chars().count());
             // increment the format index
             format_index += tepal_string.chars().count();
             tepal_string
         } else {
             // these unwraps are safe.
-            let calyx = self.sepals.as_ref().unwrap().to_string();
-            let petals = self.petals.as_ref().unwrap().to_string();
+            let calyx = self.sepals.as_ref().unwrap();
+            let petals = self.petals.as_ref().unwrap();
             // make calyx string here
             let calyx_string = format!(",{}", calyx);
             let petals_string = format!(",{}", petals);
 
             // deal with adnation logic here
             if adnation_vec.contains(&Part::Calyx) {
-                adnation_status.sepals = Some(format_index);
+                if calyx.connate {
+                    format_index += 1;
+                    adnation_status.sepals = Some(format_index);
+                    format_index -= 1;
+                } else {
+                    adnation_status.sepals = Some(format_index);
+                }
             }
-            println!("Format index at sepals: {}", format_index);
-            println!("Sepal string length: {}", calyx_string.chars().count());
             // increment the format index
             format_index += calyx_string.chars().count();
             if adnation_vec.contains(&Part::Petals) {
-                adnation_status.petals = Some(format_index);
+                if petals.connate {
+                    format_index += 1;
+                    adnation_status.petals = Some(format_index);
+                    format_index -= 1;
+                } else {
+                    adnation_status.petals = Some(format_index);
+                }
             }
-            println!("Format index at petals: {}", format_index);
-            println!("Petal string length: {}", petals_string.chars().count());
             // increment the format index again
             format_index += petals_string.chars().count();
             format!("{}{}", calyx_string, petals_string)
@@ -408,10 +475,14 @@ impl Display for Formula {
             let anthers_string = format!(",{}", a);
 
             if adnation_vec.contains(&Part::Stamens) {
-                adnation_status.stamens = Some(format_index);
+                if a.connate {
+                    format_index += 1;
+                    adnation_status.stamens = Some(format_index);
+                    format_index -= 1;
+                } else {
+                    adnation_status.stamens = Some(format_index);
+                }
             }
-            println!("Format index at stamens: {}", format_index);
-            println!("Anther string length: {}", anthers_string.chars().count());
             format_index += anthers_string.chars().count();
 
             anthers_string
@@ -423,12 +494,14 @@ impl Display for Formula {
             let carpels_string = format!(",{}", c);
 
             if adnation_vec.contains(&Part::Carpels) {
-                adnation_status.carpels = Some(format_index);
+                if c.connate {
+                    format_index += 1;
+                    adnation_status.carpels = Some(format_index);
+                    format_index -= 1;
+                } else {
+                    adnation_status.carpels = Some(format_index);
+                }
             }
-            println!("Format index at carpels: {}", format_index);
-            println!("carpels string length: {}", carpels_string.chars().count());
-            format_index += carpels_string.chars().count();
-
             carpels_string
         } else {
             "".into()
@@ -447,7 +520,6 @@ impl Display for Formula {
             format!("\n{}", adnation_status)
         };
 
-        println!("{:?}", adnation_status);
         write!(
             f,
             "{}{}{}{}{}{}",
@@ -527,15 +599,18 @@ impl Display for Sterile {
 pub enum Fruit {
     Achene,
     Berry,
+    Berrylets,
     Capsule, // note there are many different capsule types
     Caryopsis,
     DDrupe, // dehiscent drupe
     Drupe,
+    Drupelets,
     Follicle,
     IPod, // indehiscent pod
     Legume,
     Loment,
     Nut,
+    AggregateOfNuts,
     Pome,
     Samara,
     Schizocarp,
@@ -550,15 +625,18 @@ impl Display for Fruit {
         match self {
             Fruit::Achene => write!(f, "achene"),
             Fruit::Berry => write!(f, "berry"),
+            Fruit::Berrylets => write!(f, "berrylets"),
             Fruit::Capsule => write!(f, "capsule"),
             Fruit::Caryopsis => write!(f, "caryopsis"),
             Fruit::DDrupe => write!(f, "dehiscent drupe"),
             Fruit::Drupe => write!(f, "drupe"),
+            Fruit::Drupelets => write!(f, "drupelets"),
             Fruit::Follicle => write!(f, "follicle"),
             Fruit::IPod => write!(f, "indehiscent pod"),
             Fruit::Legume => write!(f, "legume"),
             Fruit::Loment => write!(f, "loment"),
             Fruit::Nut => write!(f, "nut"),
+            Fruit::AggregateOfNuts => write!(f, "aggregate of nuts"),
             Fruit::Pome => write!(f, "pome"),
             Fruit::Samara => write!(f, "samara"),
             Fruit::Schizocarp => write!(f, "schizocarp"),
@@ -575,18 +653,21 @@ impl FromStr for Fruit {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "achene" => Ok(Self::Achene),
-            "berry" => Ok(Self::Berry),
-            "capsule" => Ok(Self::Capsule),
+            "berry" | "berries" => Ok(Self::Berry),
+            "berrylets" => Ok(Self::Berrylets),
+            "capsule" | "fleshy capsule" => Ok(Self::Capsule),
             "caryopsis" => Ok(Self::Caryopsis),
             "dehiscent drupe" => Ok(Self::DDrupe),
-            "drupe" => Ok(Self::Drupe),
-            "follicle" => Ok(Self::Follicle),
+            "drupe" | "drupes" => Ok(Self::Drupe),
+            "drupelets" => Ok(Self::Drupelets),
+            "follicle" | "follicles" => Ok(Self::Follicle),
             "indehiscent pod" => Ok(Self::IPod),
             "legume" => Ok(Self::Legume),
             "loment" => Ok(Self::Loment),
             "nut" => Ok(Self::Nut),
+            "aggregate of nuts" => Ok(Self::AggregateOfNuts),
             "pome" => Ok(Self::Pome),
-            "samara" => Ok(Self::Samara),
+            "samara" | "samaras" => Ok(Self::Samara),
             "schizocarp" => Ok(Self::Schizocarp),
             "silique" => Ok(Self::Silique),
             "utricle" => Ok(Self::Utricle),
@@ -600,7 +681,6 @@ impl FromStr for Fruit {
 }
 
 /// An individual floral part
-// need to think about how to incorporate whorls here
 #[derive(Debug)]
 pub struct FloralPart {
     /// Either the calyx, petals, stamens
@@ -699,7 +779,13 @@ impl Display for FloralPart {
             whorl_strings.push(whorl.to_string());
         }
 
-        write!(f, "{}{}", self.part, whorl_strings.join("+"))
+        // connation is () around the floral part.
+        // variation is denoted as (].
+        match (self.connate, self.connation_variation) {
+            (true, true) => write!(f, "({}{}]", self.part, whorl_strings.join("+")),
+            (true, false) => write!(f, "({}{})", self.part, whorl_strings.join("+")),
+            (false, _) => write!(f, "{}{}", self.part, whorl_strings.join("+")),
+        }
     }
 }
 
@@ -708,5 +794,15 @@ impl FloralPart {
     // probably not necessary but whatever
     pub fn add_whorl(&mut self, whorl: Whorl) {
         self.whorls.push(whorl);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_1() {
+        let formula = Formula::default();
     }
 }
