@@ -30,7 +30,7 @@ pub fn parse_data<'a>() -> Result<HashMap<&'a str, (FlowerType, Formula)>> {
 }
 
 // here we do the heavy lifting parsing the csv
-fn floral_from_str(
+pub fn floral_from_str(
     symmetry: &str,
     tepals: &str,
     calyx: &str,

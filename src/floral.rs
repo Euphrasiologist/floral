@@ -6,13 +6,18 @@ use crate::error::{Error, ErrorKind};
 
 /// If the user wants an explanation of the floral parts
 trait ExplainFloralFormula {
+    /// The only method in this trait is to explain the
+    /// input as a string
     fn explain(&self) -> String;
 }
 
 /// The type of flower we're looking at
 pub enum FlowerType {
+    /// Bisexual or perfect flowers
     Bisexual,
+    /// Female only parts
     Carpellate,
+    /// Male only parts
     Staminate,
 }
 
@@ -54,13 +59,13 @@ impl FromStr for FlowerType {
     }
 }
 
-/// The floral symmetry
+/// The floral symmetry of a flower
 #[derive(Debug)]
 pub enum Symmetry {
     /// Infinitely many symmetries
     Radial,
     /// One line of symmetry
-    /// We encase a BilateralType as there are
+    /// We encase a [`BilateralType`] as there are
     /// different kinds of bilateral symmetry
     Bilateral(BilateralType),
     /// No lines of symmetry
@@ -71,6 +76,7 @@ pub enum Symmetry {
     Disymmetric,
 }
 
+/// The specific kind of bilateral symmetry
 #[derive(Debug)]
 pub enum BilateralType {
     Up,
@@ -169,7 +175,7 @@ impl FromStr for FloralPartNumber {
     type Err = Error;
 
     fn from_str(s: &str) -> result::Result<Self, Self::Err> {
-        if s == "-" {
+        if s == "-" || s.is_empty() {
             return Ok(FloralPartNumber::Finite(0));
         }
         if s == "inf" {
@@ -198,16 +204,24 @@ impl Display for FloralPartNumber {
     }
 }
 
+/// Adnation describes floral fusion between different
+/// floral parts
 #[derive(Debug, Clone, Default)]
 pub struct Adnation {
+    /// Whether there is variation in adnation within the
+    /// plant group described
     variation: bool,
+    /// An optional vector of floral parts which are adnated
     parts: Option<Vec<Part>>,
 }
 
 impl Adnation {
+    /// Set the variation of the adnation
     pub fn set_variation(&mut self, variation: bool) {
         self.variation = variation;
     }
+    /// Push a floral part to the optional vector of floral
+    /// parts
     pub fn add_part(&mut self, part: Part) {
         if self.parts.is_none() {
             self.parts = Some(vec![]);
@@ -242,42 +256,52 @@ pub struct Formula {
 }
 
 impl Formula {
+    /// Constructor function for the symmetry
     pub fn with_symmetry(mut self, symmetry: Vec<Symmetry>) -> Formula {
         self.symmetry = symmetry;
         self
     }
+    /// Constructor function for the tepals
     pub fn with_tepals(mut self, tepals: Option<FloralPart>) -> Formula {
         self.tepals = tepals;
         self
     }
+    /// Constructor function for the sepals
     pub fn with_sepals(mut self, sepals: Option<FloralPart>) -> Formula {
         self.sepals = sepals;
         self
     }
+    /// Constructor function for the petals
     pub fn with_petals(mut self, petals: Option<FloralPart>) -> Formula {
         self.petals = petals;
         self
     }
+    /// Constructor function for the stamens
     pub fn with_stamens(mut self, stamens: Option<FloralPart>) -> Formula {
         self.stamens = stamens;
         self
     }
+    /// Constructor function for the carpels
     pub fn with_carpels(mut self, carpels: Option<FloralPart>) -> Formula {
         self.carpels = carpels;
         self
     }
+    /// Constructor function for the ovary
     pub fn with_ovary(mut self, ovary: Option<Ovary>) -> Formula {
         self.ovary = ovary;
         self
     }
+    /// Constructor function for the fruit
     pub fn with_fruit(mut self, fruit: Vec<Fruit>) -> Formula {
         self.fruit = fruit;
         self
     }
+    /// Constructor function for the adnation
     pub fn with_adnation(mut self, adnation: Adnation) -> Formula {
         self.adnation = adnation;
         self
     }
+    /// Build the floral formula. Might be redundant?
     pub fn build(self) -> Formula {
         Formula {
             symmetry: self.symmetry,
@@ -293,14 +317,22 @@ impl Formula {
     }
 }
 
+/// The information needed to render the adnation
+/// in the display method of the floral formula
 #[derive(Debug, Default)]
 struct AdnationIndex {
-    // need variation information here.
+    /// Whether adnation is variable or not.
+    /// Inherited from [`Adnation`]
     variation: bool,
+    /// Where the tepals index is
     tepals: Option<usize>,
+    /// Where the sepals index is
     sepals: Option<usize>,
+    /// Where the petals index is
     petals: Option<usize>,
+    /// Where the stamens index is
     stamens: Option<usize>,
+    /// Where the carpels index is
     carpels: Option<usize>,
 }
 
@@ -310,8 +342,12 @@ trait AdnationVariation {
 }
 
 impl AdnationVariation for AdnationIndex {
+    /// The character set for a constant (i.e. invariant)
+    /// adnation between floral parts
     const CONSTANT: [char; 4] = ['╰', '╯', '─', '┴'];
 
+    /// The character set for variable adnation between
+    /// floral parts
     const VARIABLE: [char; 4] = ['└', '┘', '┄', '┴'];
 }
 
@@ -497,7 +533,6 @@ impl Display for Formula {
                 if c.connate {
                     format_index += 1;
                     adnation_status.carpels = Some(format_index);
-                    format_index -= 1;
                 } else {
                     adnation_status.carpels = Some(format_index);
                 }
@@ -533,7 +568,9 @@ impl Display for Formula {
 /// betweens.
 #[derive(Debug)]
 pub enum Ovary {
+    /// A superior ovary
     Superior,
+    /// An inferior ovary
     Inferior,
 }
 
@@ -594,7 +631,7 @@ impl Display for Sterile {
     }
 }
 
-/// All the different fruit types.
+/// All the different fruit types. A growing list.
 #[derive(Debug)]
 pub enum Fruit {
     Achene,
@@ -690,23 +727,30 @@ pub struct FloralPart {
     connate: bool,
     /// Is there variation in connation?
     connation_variation: bool,
+    /// All the whorls in this floral part which are
+    /// differentiated
     whorls: Vec<Whorl>,
 }
 
 impl FloralPart {
+    /// Set the floral part
     pub fn set_part(&mut self, part: Part) {
         self.part = part;
     }
+    /// Set the connation of the floral part
     pub fn set_connation(&mut self, connation: bool) {
         self.connate = connation;
     }
+    /// Set the connation variation of the floral part
     pub fn set_connation_variation(&mut self, connation_variation: bool) {
         self.connation_variation = connation_variation;
     }
 }
 
+/// A part of a floral organ, within the same part
 #[derive(Debug)]
 pub struct Whorl {
+    /// The number of floral parts (if there is no range)
     number: Option<FloralPartNumber>,
     /// The minimum number of floral parts
     min: Option<FloralPartNumber>,
@@ -718,6 +762,7 @@ pub struct Whorl {
 }
 
 impl Whorl {
+    /// Constructor for the [`Whorl`] struct
     pub fn new(
         number: Option<FloralPartNumber>,
         min: Option<FloralPartNumber>,
@@ -769,8 +814,8 @@ impl Default for FloralPart {
     }
 }
 
+// TODO: deal with fusion between different whorls of same floral part?
 impl Display for FloralPart {
-    // connation and connation variation are not formatted yet.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // move to the Whorl struct.
         let mut whorl_strings = Vec::new();
@@ -790,8 +835,7 @@ impl Display for FloralPart {
 }
 
 impl FloralPart {
-    // add a whorl into the struct
-    // probably not necessary but whatever
+    /// Add a whorl into the floral part.
     pub fn add_whorl(&mut self, whorl: Whorl) {
         self.whorls.push(whorl);
     }
@@ -801,8 +845,75 @@ impl FloralPart {
 mod tests {
     use super::*;
 
+    fn floral_from_test_str(s: &str) -> Formula {
+        let line_element = s.split(',').collect::<Vec<&str>>();
+
+        if let [order, family, flower_type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation] =
+            &line_element[..]
+        {
+            crate::parse::floral_from_str(
+                symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation,
+            )
+            .unwrap()
+        } else {
+            panic!("could not parse floral string")
+        }
+    }
+
     #[test]
     fn test_1() {
-        let formula = Formula::default();
+        // a simple case
+        // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
+        let floral_string = "Amborellales,amborellaceae,s,s,8-11,-,-,inf,0,-,-,-";
+        let fs = floral_from_test_str(floral_string);
+        assert_eq!(fs.to_string(), "↻,T8-11,A∞,G0;no fruit")
+    }
+    #[test]
+    fn test_2() {
+        // bisexual with berry fruit
+        // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
+        let floral_string = "test2,test2,b,r,2,-,-,2,2,i,berry,-";
+        let fs = floral_from_test_str(floral_string);
+        assert_eq!(fs.to_string(), "*,T2,A2,G2;berry")
+    }
+    #[test]
+    fn test_3() {
+        // with some adnation between floral parts
+        // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
+        let floral_string = "test3,test3,b,r,2,-,-,2,2,i,berry,T;A;G";
+        let fs = floral_from_test_str(floral_string);
+        assert_eq!(
+            fs.to_string(),
+            "\
+*,T2,A2,G2;berry
+  ╰──┴──╯"
+        )
+    }
+    #[test]
+    fn test_4() {
+        // with some adnation between floral parts and fusion within
+        // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
+        let floral_string = "test4,test4,b,r,2;f,-,-,2;f,2;f,i,berry,T;A;G";
+        let fs = floral_from_test_str(floral_string);
+        assert_eq!(
+            fs.to_string(),
+            "\
+*,(T2),(A2),(G2);berry
+   ╰────┴────╯"
+        )
+    }
+    #[test]
+    fn test_5() {
+        // with some adnation between floral parts and fusion within
+        // and extra whorls, in this case, 5 staminodes
+        // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
+        let floral_string = "test5,test5,b,r,2;f,-,-,2;5s;f,2;f,i,berry,T;A;G";
+        let fs = floral_from_test_str(floral_string);
+        assert_eq!(
+            fs.to_string(),
+            "\
+*,(T2),(A2+5•),(G2);berry
+   ╰────┴───────╯"
+        )
     }
 }
