@@ -2,6 +2,8 @@
 use std::num::ParseIntError;
 use std::{error::Error as StdError, fmt, result};
 
+use pico_args::Error as PicoError;
+
 /// A type alias for `Result<T, refer::Error>`.
 pub type Result<T> = result::Result<T, Error>;
 
@@ -32,12 +34,19 @@ impl From<ParseIntError> for Error {
     }
 }
 
+impl From<PicoError> for Error {
+    fn from(err: PicoError) -> Self {
+        Error::new(ErrorKind::Cli(err))
+    }
+}
+
 /// The specific type of error that can occur.
 #[derive(Debug)]
 pub enum ErrorKind {
     ParseError(String),
     FromStr(String),
     ParseInt(ParseIntError),
+    Cli(PicoError),
 }
 
 impl StdError for Error {}
@@ -48,6 +57,7 @@ impl fmt::Display for Error {
             ErrorKind::ParseError(err) => err.fmt(f),
             ErrorKind::FromStr(err) => err.fmt(f),
             ErrorKind::ParseInt(ref err) => err.fmt(f),
+            ErrorKind::Cli(err) => err.fmt(f),
         }
     }
 }

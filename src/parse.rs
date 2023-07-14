@@ -1,16 +1,16 @@
 use crate::error::Result;
 use crate::floral::*;
-use std::collections::HashMap;
+use std::collections::BTreeMap as Map;
 use std::str::FromStr;
 
 // the data from our assets folder.
 pub const DATA: &str = include_str!("../assets/formulae.csv");
 
 // function to parse the data into a map
-pub fn parse_data<'a>() -> Result<HashMap<&'a str, (FlowerType, Formula)>> {
+pub fn parse_data<'a>() -> Result<Map<(&'a str, &'a str, FlowerType), Formula>> {
     // skip headers
     let lines = DATA.lines().skip(1);
-    let mut data_map = HashMap::new();
+    let mut data_map = Map::new();
     for line in lines {
         // this is technically a csv parser, but I don't really want the overhead of a
         // fully blown csv parser yet (e.g. csv crate)
@@ -23,13 +23,14 @@ pub fn parse_data<'a>() -> Result<HashMap<&'a str, (FlowerType, Formula)>> {
                 symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation,
             )?;
             let ft = FlowerType::from_str(flower_type)?;
-            data_map.insert(*family, (ft, floral));
+            data_map.insert((*order, *family, ft), floral);
         }
     }
     Ok(data_map)
 }
 
 // here we do the heavy lifting parsing the csv
+#[allow(clippy::too_many_arguments)]
 pub fn floral_from_str(
     symmetry: &str,
     tepals: &str,
@@ -49,14 +50,14 @@ pub fn floral_from_str(
         .map(|e| Symmetry::from_str(e).unwrap())
         .collect::<Vec<Symmetry>>();
 
-    let parsed_tepals = parse_floral_part_to_enum(tepals, Part::Tepals)?;
-    let parsed_calyx = parse_floral_part_to_enum(calyx, Part::Calyx)?;
-    let parsed_petals = parse_floral_part_to_enum(petals, Part::Petals)?;
-    let parsed_anthers = parse_floral_part_to_enum(anthers, Part::Stamens)?;
-    let parsed_carpels = parse_floral_part_to_enum(carpels, Part::Carpels)?;
+    let parsed_ovary = parse_ovary(ovary)?;
 
-    // parse the rest
-    // let parsed_ovary =
+    let parsed_tepals = parse_floral_part_to_enum(tepals, Part::Tepals, None)?;
+    let parsed_calyx = parse_floral_part_to_enum(calyx, Part::Calyx, None)?;
+    let parsed_petals = parse_floral_part_to_enum(petals, Part::Petals, None)?;
+    let parsed_anthers = parse_floral_part_to_enum(anthers, Part::Stamens, None)?;
+    let parsed_carpels = parse_floral_part_to_enum(carpels, Part::Carpels, parsed_ovary)?;
+
     let parsed_adnation = parse_adnation(adnation)?;
     let parsed_fruit = {
         let sp = fruit.split(';').collect::<Vec<&str>>();
@@ -71,8 +72,6 @@ pub fn floral_from_str(
         .with_petals(parsed_petals)
         .with_stamens(parsed_anthers)
         .with_carpels(parsed_carpels)
-        // TODO, ovary!
-        .with_ovary(None)
         .with_fruit(parsed_fruit)
         .with_adnation(parsed_adnation)
         .build();
@@ -80,6 +79,26 @@ pub fn floral_from_str(
     Ok(formula)
 }
 
+fn parse_ovary(s: &str) -> Result<Option<Ovary>> {
+    if s.is_empty() || s == "-" {
+        return Ok(None);
+    }
+
+    let sp = s.split(';').collect::<Vec<&str>>();
+    let mut ov_vec = Vec::new();
+
+    for el in sp {
+        ov_vec.push(Ovary::from_str(el)?);
+    }
+
+    if ov_vec.len() > 1 {
+        Ok(Some(Ovary::Both))
+    } else {
+        Ok(Some(ov_vec.clone()[0]))
+    }
+}
+
+// parse adnation
 fn parse_adnation(s: &str) -> Result<Adnation> {
     if s.is_empty() || s == "-" {
         Ok(Adnation::default())
@@ -101,13 +120,19 @@ fn parse_adnation(s: &str) -> Result<Adnation> {
     }
 }
 
-fn parse_floral_part_to_enum(s: &str, floral_part: Part) -> Result<Option<FloralPart>> {
+// re-used a bunch of times for each of the floral parts.
+fn parse_floral_part_to_enum(
+    s: &str,
+    floral_part: Part,
+    ovary: Option<Ovary>,
+) -> Result<Option<FloralPart>> {
     if s.is_empty() || s == "-" {
         return Ok(None);
     }
 
     let sp = s.split(';').collect::<Vec<&str>>();
     let mut floral = FloralPart::default();
+    floral.set_ovary(ovary);
     floral.set_part(floral_part);
 
     // e.g. 2-4;f;v

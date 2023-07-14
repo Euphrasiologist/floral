@@ -12,6 +12,7 @@ trait ExplainFloralFormula {
 }
 
 /// The type of flower we're looking at
+#[derive(PartialEq, Hash, Eq, PartialOrd, Ord)]
 pub enum FlowerType {
     /// Bisexual or perfect flowers
     Bisexual,
@@ -247,8 +248,6 @@ pub struct Formula {
     stamens: Option<FloralPart>,
     /// Carpels
     carpels: Option<FloralPart>,
-    /// Ovary
-    ovary: Option<Ovary>,
     /// Fruit
     fruit: Vec<Fruit>,
     /// Where is the adnation present?
@@ -286,11 +285,6 @@ impl Formula {
         self.carpels = carpels;
         self
     }
-    /// Constructor function for the ovary
-    pub fn with_ovary(mut self, ovary: Option<Ovary>) -> Formula {
-        self.ovary = ovary;
-        self
-    }
     /// Constructor function for the fruit
     pub fn with_fruit(mut self, fruit: Vec<Fruit>) -> Formula {
         self.fruit = fruit;
@@ -310,7 +304,6 @@ impl Formula {
             petals: self.petals,
             stamens: self.stamens,
             carpels: self.carpels,
-            ovary: self.ovary,
             fruit: self.fruit,
             adnation: self.adnation,
         }
@@ -566,12 +559,29 @@ impl Display for Formula {
 /// An ovary can be inferior or
 /// superior. Though, there are in
 /// betweens.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Ovary {
     /// A superior ovary
     Superior,
     /// An inferior ovary
     Inferior,
+    /// Both
+    Both,
+}
+
+impl FromStr for Ovary {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "s" => Ok(Self::Superior),
+            "i" => Ok(Self::Inferior),
+            ov_str => Err(Error::new(ErrorKind::FromStr(format!(
+                "the string: {}, does not correspond to an ovary position",
+                ov_str
+            )))),
+        }
+    }
 }
 
 /// The part of the flower, which
@@ -730,6 +740,8 @@ pub struct FloralPart {
     /// All the whorls in this floral part which are
     /// differentiated
     whorls: Vec<Whorl>,
+    /// Ovary information makes most sense here
+    ovary: Option<Ovary>,
 }
 
 impl FloralPart {
@@ -744,6 +756,9 @@ impl FloralPart {
     /// Set the connation variation of the floral part
     pub fn set_connation_variation(&mut self, connation_variation: bool) {
         self.connation_variation = connation_variation;
+    }
+    pub fn set_ovary(&mut self, ovary: Option<Ovary>) {
+        self.ovary = ovary;
     }
 }
 
@@ -810,6 +825,7 @@ impl Default for FloralPart {
             connate: false,
             connation_variation: false,
             whorls: vec![],
+            ovary: None,
         }
     }
 }
@@ -817,19 +833,29 @@ impl Default for FloralPart {
 // TODO: deal with fusion between different whorls of same floral part?
 impl Display for FloralPart {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // move to the Whorl struct.
         let mut whorl_strings = Vec::new();
 
         for whorl in &self.whorls {
             whorl_strings.push(whorl.to_string());
         }
 
+        // TODO: HERE IS WHERE THE OVARY POSITION GOES
+        let part = if let Some(ovary) = self.ovary {
+            match ovary {
+                Ovary::Superior => format!("{}{}", '\u{0332}', self.part),
+                Ovary::Inferior => format!("{}{}", '\u{305}', self.part),
+                Ovary::Both => format!("{}{}{}", '\u{305}', '\u{0332}', self.part),
+            }
+        } else {
+            self.part.to_string()
+        };
+
         // connation is () around the floral part.
         // variation is denoted as (].
         match (self.connate, self.connation_variation) {
-            (true, true) => write!(f, "({}{}]", self.part, whorl_strings.join("+")),
-            (true, false) => write!(f, "({}{})", self.part, whorl_strings.join("+")),
-            (false, _) => write!(f, "{}{}", self.part, whorl_strings.join("+")),
+            (true, true) => write!(f, "({}{}]", part, whorl_strings.join("+")),
+            (true, false) => write!(f, "({}{})", part, whorl_strings.join("+")),
+            (false, _) => write!(f, "{}{}", part, whorl_strings.join("+")),
         }
     }
 }
@@ -874,7 +900,7 @@ mod tests {
         // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
         let floral_string = "test2,test2,b,r,2,-,-,2,2,i,berry,-";
         let fs = floral_from_test_str(floral_string);
-        assert_eq!(fs.to_string(), "*,T2,A2,G2;berry")
+        assert_eq!(fs.to_string(), "*,T2,A2,\u{305}G2;berry")
     }
     #[test]
     fn test_3() {
@@ -885,7 +911,7 @@ mod tests {
         assert_eq!(
             fs.to_string(),
             "\
-*,T2,A2,G2;berry
+*,T2,A2,\u{305}G2;berry
   ╰──┴──╯"
         )
     }
@@ -898,7 +924,7 @@ mod tests {
         assert_eq!(
             fs.to_string(),
             "\
-*,(T2),(A2),(G2);berry
+*,(T2),(A2),(\u{305}G2);berry
    ╰────┴────╯"
         )
     }
@@ -912,7 +938,7 @@ mod tests {
         assert_eq!(
             fs.to_string(),
             "\
-*,(T2),(A2+5•),(G2);berry
+*,(T2),(A2+5•),(\u{305}G2);berry
    ╰────┴───────╯"
         )
     }
