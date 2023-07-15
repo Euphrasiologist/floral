@@ -308,6 +308,9 @@ impl Formula {
             adnation: self.adnation,
         }
     }
+    pub fn has_adnation(&self) -> bool {
+        self.adnation.parts.is_some()
+    }
 }
 
 /// The information needed to render the adnation

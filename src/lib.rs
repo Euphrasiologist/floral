@@ -1,4 +1,5 @@
 use error::Result;
+use floral::{FlowerType, Formula};
 use std::cmp;
 
 pub mod error;
@@ -22,14 +23,6 @@ ARGS:
   <STRING>              Flowering plant order/family name 
 ";
 
-// I guess there might be more args in the future.
-struct FloralArgs {
-    string: String,
-    all: bool,
-    explain: bool,
-    compact: bool,
-}
-
 pub fn parse_args() -> Result<()> {
     let mut pargs = pico_args::Arguments::from_env();
 
@@ -38,6 +31,9 @@ pub fn parse_args() -> Result<()> {
         std::process::exit(0);
     }
 
+    let cli_all = pargs.contains(["-a", "--all"]);
+    let cli_explain = pargs.contains(["-e", "--explain"]);
+    let cli_compact = pargs.contains(["-c", "--compact"]);
     let cli_order = pargs.contains(["-o", "--order"]);
 
     let data = parse::parse_data()?;
@@ -47,25 +43,48 @@ pub fn parse_args() -> Result<()> {
         data.keys().map(|(_, f, _)| f.to_string()).collect()
     };
 
-    let input_str: String = pargs.free_from_str()?;
+    let input_str = match pargs.free_from_str::<String>() {
+        Ok(input_s) => Ok(input_s),
+        Err(err) => {
+            if cli_all {
+                Ok("".into()) // don't matter what this string is, it isn't used
+            } else {
+                Err(err)
+            }
+        }
+    };
+
+    let input_str = input_str?;
 
     if let Some((edit_dist, fo_string)) = did_you_mean(&data_keys, &input_str) {
         // so we don't do unexpected things on the cli
-        if edit_dist >= 4 {
+        if edit_dist >= 4 && !input_str.is_empty() {
             eprintln!("You typed {input_str}, did you mean {fo_string}? Or something else?");
             std::process::exit(0);
         }
 
+        let format_formula =
+            |order: &str, family: String, ft: FlowerType, formula: Formula| -> String {
+                format!("{order} -> {family} -> {ft}\n{formula}")
+            };
+
         for ((order, family, ft), formula) in data {
-            // println!("{order}\n{family}\n{ft}\n{formula}");
+            if cli_all {
+                let family = some_kind_of_uppercase_first_letter(family);
+                let formatted = format_formula(order, family, ft, formula);
+                println!("{}\n", formatted);
+                continue;
+            }
             if cli_order {
                 if fo_string == order {
-                    let formatted = format!("{order}, {family}, {ft}:\n{formula}");
-                    println!("{}", formatted);
+                    let family = some_kind_of_uppercase_first_letter(family);
+                    let formatted = format!("{order}\n{family}\n{ft}\n{formula}");
+                    println!("{}\n", formatted);
                 }
             } else if fo_string == family {
-                let formatted = format!("{family}\n{ft}\n{formula}");
-                println!("{}", formatted);
+                let family = some_kind_of_uppercase_first_letter(family);
+                let formatted = format!("{order}\n{family}\n{ft}: {formula}");
+                println!("{}\n", formatted);
             }
         }
     }
@@ -130,5 +149,13 @@ fn lev_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
         Some(dcol[m])
     } else {
         None
+    }
+}
+
+fn some_kind_of_uppercase_first_letter(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
 }
