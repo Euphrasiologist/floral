@@ -7,7 +7,7 @@ Austrobaileyales,illiciaceae,b,s,5-inf,-,-,4-inf;f,7-inf,s,follicles;berries,-
 Magnoliales,magnoliaceae,b,r,6-inf,-,-,inf,inf,s,follicles;samaras,-
 Magnoliales,annonaceae,b,r,-,3,6,inf,3-inf;f;v,s,berries,-
 Magnoliales,myristicaceae,s,r,3,-,-,2-inf;f,0,-,-,-
-Magnoliales,myristicaceae,c,r,3,-,-,0,1,s,"fleshy ""capsule""",-
+Magnoliales,myristicaceae,c,r,3,-,-,0,1,s,fleshy capsule,-
 Laurales,lauraceae,b,r,6;f;v,-,-,3-12;3-12s,1,s,drupe,-
 Laurales,calycanthaceae,b,s,15-40,-,-,5-30;infs,1-inf;f,s,capsule;berry,-
 Laurales,hernandiaceae,s,r,6,-,-,3;3s,0,-,-,-
@@ -21,3 +21,29 @@ Canellales,canellaceae,b,r,-,3,5-12,6-inf;f,2-6;f,s,berries;follicles,-
 Piperales,aristolochiaceae,b,r;down,-,3-4;f,0-3,6-46,3-6;f;v,s;i,capsule,A;G;v
 Piperales,saururaceae,b,d;r;down,0,-,-,3-6,3-5,i,capsule,-
 Piperales,piperaceae,b,r,0,-,-,1-10,1-4;f,s,drupe,-
+Ceratophyllales,ceratophyllaceae,s,r,7-inf,-,-,10-inf,0,-,-,-
+Ceratophyllales,ceratophyllaceae,c,r,7-inf,-,-,0,1,s,achene,-
+Acorales,acoraceae,b,up,2-3;3,-,-,3;3,3;f,s,berry,-
+Alismatales,hydrocharitaceae,s,r,-,3,3,2-inf,0,-,-,-
+Alismatales,hydrocharitaceae,c,r,-,3,3,0,3-6;f,i,berry;fleshy capsule,-
+Alismatales,alismataceae,b,r,-,3,3,6-inf,6-inf,s,achene,-
+Alismatales,araceae,b,r,0-6,-,-,4-6,1-inf;f,s,berry;utricle,-
+Alismatales,juncaginaceae,b,r,0-6,-,-,1-6,1-6,s,achene,-
+Alismatales,potamogetonaceae,b,r,0,-,-,4,4,s,achene;drupe,-
+Asparagales,orchidaceae,b,up,5;1,-,-,1-2,3,i,capsule,A;G
+Asparagales,asphodelaceae,b,r;down,6;f;v,-,-,6,3;f,s,capsule,-
+Asparagales,iridaceae,b,r;down,6;f;v,-,-,3;f;v,3;f,i,capsule,T;A;v
+Asparagales,alliaceae,b,r;down,6;f;v,-,-,6;f;v,3;f,s,capsule,T;A;v
+Asparagales,amaryllidaceae,b,r;down,6;f;v,-,-,6;f;v,3;f,s,capsule,T;A;v
+Asparagales,hyacinthaceae,b,r,6;f;v,-,-,6;f;v,3;f,s,capsule,T;A;v
+Asparagales,agavaceae,b,r;down,6;f;v,-,-,6;f;v,3;f,s;i,capsule,T;A;v
+Asparagales,ruscaceae,b,r,6;f;v,-,-,6,3;f,s,berry,T;A;v
+Asparagales,asparagaceae,b,r,6,-,-,6;f;v,3;f,s,berry,T;A;v
+Asparagales,hypoxidaceae,b,r,6;f;v,-,-,3-6,3;f,i,berry;capsule,T;A;v
+Dioscoreales,dioscoreaceae,s,r,6,-,-,6;f;v,0,-,-,T;A
+Dioscoreales,dioscoreaceae,c,r,6,-,-,0,3;f,i,capsule;samara;berry,-
+Dioscoreales,taccaceae,b,r,-,3,3,6,3;f,i,capsule;berry,-
+Liliales,liliaceae,b,r,6,-,-,6,3;f,s,capsule;berry,-
+Liliales,colchicaceae,b,r,6;f;v,-,-,6,3;f,s,capsule,T;A;v
+Liliales,smilacaceae,s,r,6;f;v,-,-,6,0,-,-,T;A
+Liliales,smilacaceae,s,r,6;f;v,-,-,0,3;f,s,berry,-

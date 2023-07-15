@@ -78,12 +78,12 @@ pub fn parse_args() -> Result<()> {
             if cli_order {
                 if fo_string == order {
                     let family = some_kind_of_uppercase_first_letter(family);
-                    let formatted = format!("{order}\n{family}\n{ft}\n{formula}");
+                    let formatted = format_formula(order, family, ft, formula);
                     println!("{}\n", formatted);
                 }
             } else if fo_string == family {
                 let family = some_kind_of_uppercase_first_letter(family);
-                let formatted = format!("{order}\n{family}\n{ft}: {formula}");
+                let formatted = format_formula(order, family, ft, formula);
                 println!("{}\n", formatted);
             }
         }
