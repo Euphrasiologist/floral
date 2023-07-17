@@ -155,9 +155,10 @@ impl FromStr for Symmetry {
             "a" => Ok(Self::Asymmetry),
             "s" => Ok(Self::Spiral),
             "d" => Ok(Self::Disymmetric),
-            _ => Err(Error::new(ErrorKind::FromStr(
-                "Some other error in parsing the symmetry".into(),
-            ))),
+            other => Err(Error::new(ErrorKind::FromStr(format!(
+                "the string '{}' - could not be converted to a symmetry",
+                other
+            )))),
         }
     }
 }
@@ -332,6 +333,18 @@ struct AdnationIndex {
     carpels: Option<usize>,
 }
 
+impl AdnationIndex {
+    fn set_adnation_status(&mut self, part: Part, index: usize) {
+        match part {
+            Part::Tepals => self.tepals = Some(index),
+            Part::Calyx => self.sepals = Some(index),
+            Part::Petals => self.petals = Some(index),
+            Part::Stamens => self.stamens = Some(index),
+            Part::Carpels => self.carpels = Some(index),
+        }
+    }
+}
+
 trait AdnationVariation {
     const CONSTANT: [char; 4];
     const VARIABLE: [char; 4];
@@ -444,77 +457,134 @@ impl Display for Formula {
             adnation_status.variation = true;
         }
 
-        let calyx_perianth_or_tepals = if let Some(t) = &self.tepals {
-            // calyx and petals not needed
-            // probably make this into a proper error.
-            assert!(self.sepals.is_none() && self.petals.is_none());
-            // check if tepals are in the adnation vec.
-            if adnation_vec.contains(&Part::Tepals) {
-                // if there is connation, there's an extra parenthesis
-                // we have to account for.
-                // same for other floral parts.
-                if t.connate {
-                    // so we add one to the index
+        // each time we go through a floral part, we need to update
+        // both the format index to know where we are in the string,
+        // and also the adnation index struct which we format later.
+        fn update_adnation_vec_and_format_index(
+            adnation_vec: &[Part],
+            part: Part,
+            floral_part: &FloralPart,
+            mut format_index: usize,
+            adnation_status: &mut AdnationIndex,
+        ) {
+            if adnation_vec.contains(&part) {
+                if floral_part.connate {
                     format_index += 1;
-                    // assign to the adnation status
-                    adnation_status.tepals = Some(format_index);
-                    // then decrement the index again
+                    adnation_status.set_adnation_status(part, format_index);
                     format_index -= 1;
                 } else {
-                    adnation_status.tepals = Some(format_index);
+                    adnation_status.set_adnation_status(part, format_index);
                 }
             }
-            // the tepal string to return
-            let tepal_string = format!(",{}", t);
-            // increment the format index
-            format_index += tepal_string.chars().count();
-            tepal_string
-        } else {
-            // these unwraps are safe.
-            let calyx = self.sepals.as_ref().unwrap();
-            let petals = self.petals.as_ref().unwrap();
-            // make calyx string here
-            let calyx_string = format!(",{}", calyx);
-            let petals_string = format!(",{}", petals);
+        }
 
-            // deal with adnation logic here
-            if adnation_vec.contains(&Part::Calyx) {
-                if calyx.connate {
-                    format_index += 1;
-                    adnation_status.sepals = Some(format_index);
-                    format_index -= 1;
-                } else {
-                    adnation_status.sepals = Some(format_index);
-                }
+        let calyx_perianth_or_tepals: String = match (&self.tepals, &self.petals, &self.sepals) {
+            (None, None, None) => panic!("there should be at least one floral part"),
+            (None, None, Some(_)) => panic!("petals should be specified if tepals are"),
+            (None, Some(_), None) => panic!("sepals should be specified if petals are"),
+            (None, Some(p), Some(s)) => {
+                // make petal/calyx string here
+                let calyx_string = format!(",{}", s);
+                let petals_string = format!(",{}", p);
+
+                // deal with adnation logic here
+                // for the calyx (as this appears first in the formula)
+                update_adnation_vec_and_format_index(
+                    &adnation_vec,
+                    Part::Calyx,
+                    s,
+                    format_index,
+                    &mut adnation_status,
+                );
+                // increment the format index
+                format_index += calyx_string.chars().count();
+                // now deal with the petals
+                update_adnation_vec_and_format_index(
+                    &adnation_vec,
+                    Part::Petals,
+                    p,
+                    format_index,
+                    &mut adnation_status,
+                );
+                // increment the format index again
+                format_index += petals_string.chars().count();
+                format!("{}{}", calyx_string, petals_string)
             }
-            // increment the format index
-            format_index += calyx_string.chars().count();
-            if adnation_vec.contains(&Part::Petals) {
-                if petals.connate {
-                    format_index += 1;
-                    adnation_status.petals = Some(format_index);
-                    format_index -= 1;
-                } else {
-                    adnation_status.petals = Some(format_index);
-                }
+            (Some(t), None, None) => {
+                // just tepals
+                // check if tepals are in the adnation vec.
+                update_adnation_vec_and_format_index(
+                    &adnation_vec,
+                    Part::Tepals,
+                    t,
+                    format_index,
+                    &mut adnation_status,
+                );
+
+                // the tepal string to return
+                let tepal_string = format!(",{}", t);
+                // increment the format index
+                format_index += tepal_string.chars().count();
+                tepal_string
             }
-            // increment the format index again
-            format_index += petals_string.chars().count();
-            format!("{}{}", calyx_string, petals_string)
+            (Some(_), None, Some(_)) => {
+                panic!("petals should be specified if tepals and sepals are")
+            }
+            (Some(_), Some(_), None) => panic!("sepals are specified without petals and tepals"),
+            (Some(t), Some(p), Some(s)) => {
+                // tepals[or petals and sepals]
+                // we need to do everything here.
+                let tepal_string = format!(",{}", t);
+                let calyx_string = format!("[or {}", s);
+                let petals_string = format!(",{}]", p);
+
+                update_adnation_vec_and_format_index(
+                    &adnation_vec,
+                    Part::Tepals,
+                    t,
+                    format_index,
+                    &mut adnation_status,
+                );
+
+                format_index += tepal_string.chars().count();
+                format_index += 3; // '[or '
+
+                update_adnation_vec_and_format_index(
+                    &adnation_vec,
+                    Part::Calyx,
+                    s,
+                    format_index,
+                    &mut adnation_status,
+                );
+
+                format_index += calyx_string.chars().count();
+
+                update_adnation_vec_and_format_index(
+                    &adnation_vec,
+                    Part::Petals,
+                    p,
+                    format_index,
+                    &mut adnation_status,
+                );
+
+                format_index += petals_string.chars().count();
+                // and decrease the index according to '[or '
+                format_index -= 3;
+
+                format!("{}{}{}", tepal_string, calyx_string, petals_string)
+            }
         };
 
         let anthers = if let Some(a) = &self.stamens {
             let anthers_string = format!(",{}", a);
 
-            if adnation_vec.contains(&Part::Stamens) {
-                if a.connate {
-                    format_index += 1;
-                    adnation_status.stamens = Some(format_index);
-                    format_index -= 1;
-                } else {
-                    adnation_status.stamens = Some(format_index);
-                }
-            }
+            update_adnation_vec_and_format_index(
+                &adnation_vec,
+                Part::Stamens,
+                a,
+                format_index,
+                &mut adnation_status,
+            );
             format_index += anthers_string.chars().count();
 
             anthers_string
@@ -525,14 +595,13 @@ impl Display for Formula {
         let carpels = if let Some(c) = &self.carpels {
             let carpels_string = format!(",{}", c);
 
-            if adnation_vec.contains(&Part::Carpels) {
-                if c.connate {
-                    format_index += 1;
-                    adnation_status.carpels = Some(format_index);
-                } else {
-                    adnation_status.carpels = Some(format_index);
-                }
-            }
+            update_adnation_vec_and_format_index(
+                &adnation_vec,
+                Part::Carpels,
+                c,
+                format_index,
+                &mut adnation_status,
+            );
             carpels_string
         } else {
             "".into()
@@ -877,15 +946,20 @@ mod tests {
     fn floral_from_test_str(s: &str) -> Formula {
         let line_element = s.split(',').collect::<Vec<&str>>();
 
-        if let [order, family, flower_type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation] =
+        if let [_order, _family, _flower_type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation] =
             &line_element[..]
         {
-            crate::parse::floral_from_str(
+            match crate::parse::floral_from_str(
                 symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation,
-            )
-            .unwrap()
+            ) {
+                Ok(formula) => formula,
+                Err(e) => {
+                    let error = format!("ERROR: {}", e);
+                    panic!("{}", error);
+                }
+            }
         } else {
-            panic!("could not parse floral string")
+            panic!("floral csv string had incorrect number of fields")
         }
     }
 
@@ -893,7 +967,7 @@ mod tests {
     fn test_1() {
         // a simple case
         // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
-        let floral_string = "Amborellales,amborellaceae,s,s,8-11,-,-,inf,0,-,-,-";
+        let floral_string = "Amborellales,amborellaceae,s,g,8-11,-,-,inf,0,-,-,-";
         let fs = floral_from_test_str(floral_string);
         assert_eq!(fs.to_string(), "↻,T8-11,A∞,G0;no fruit")
     }
@@ -943,6 +1017,21 @@ mod tests {
             "\
 *,(T2),(A2+5•),(\u{305}G2);berry
    ╰────┴───────╯"
+        )
+    }
+    #[test]
+    fn test_6() {
+        // with some adnation between floral parts and fusion within
+        // and extra whorls, in this case, 5 staminodes
+        // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
+        // in addition, testing all floral parts with the OR statement.
+        let floral_string = "test5,test5,b,r,2,2,2,2,2,i,berry,T;A;G";
+        let fs = floral_from_test_str(floral_string);
+        assert_eq!(
+            fs.to_string(),
+            "\
+*,T2[or K2,C2],A2,\u{305}G2;berry
+  ╰────────────┴──╯"
         )
     }
 }
