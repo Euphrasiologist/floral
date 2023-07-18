@@ -13,7 +13,7 @@ pub fn parse_data<'a>() -> Result<Map<(&'a str, &'a str, FlowerType), Formula>> 
     let mut data_map = Map::new();
     for line in lines {
         // this is technically a csv parser, but I don't really want the overhead of a
-        // fully blown csv parser yet (e.g. csv crate)
+        // fully blown csv parser yet (e.g. csv crate), though it would be nice for errors.
         let line_elements = line.split(',').collect::<Vec<&str>>();
 
         if let [order, family, flower_type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation] =
@@ -44,11 +44,8 @@ pub fn floral_from_str(
 ) -> Result<Formula> {
     let sym_vec = symmetry.split(';').collect::<Vec<&str>>();
 
-    let parsed_sym = sym_vec
-        .iter()
-        // deal with this unwrap later
-        .map(|e| Symmetry::from_str(e).unwrap())
-        .collect::<Vec<Symmetry>>();
+    let parsed_sym: Result<Vec<Symmetry>> = sym_vec.iter().map(|e| Symmetry::from_str(e)).collect();
+    let parsed_sym = parsed_sym?;
 
     let parsed_ovary = parse_ovary(ovary)?;
 
@@ -183,7 +180,6 @@ fn parse_floral_part_to_enum(
             }
         }
     }
-    // the relevant fields will stay as None
 
     Ok(Some(floral))
 }
