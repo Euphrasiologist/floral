@@ -4,7 +4,7 @@ use std::{error::Error as StdError, fmt, result};
 
 use pico_args::Error as PicoError;
 
-/// A type alias for `Result<T, refer::Error>`.
+/// A type alias for `Result<T, floral::Error>`.
 pub type Result<T> = result::Result<T, Error>;
 
 /// An error that can happen.

@@ -1,9 +1,38 @@
-use crate::floral::{FlowerType, Formula};
+//! `floral` is a command line interface and crate
+//! to generate and format floral formulae. The style format
+//! is inspired from two books:
+//!
+//! - Floral Diagrams (<i>Ronse De Crane</i>, 2010)
+//! - Plant Systematics, A Phylogenetic Approach (<i>Judd et al.,</i> 4th Ed 2016)
+//!
+//! The floral formula is very well typed (perhaps overly so)
+//! and the CLI interface works by ingesting a database of floral
+//! formulae. This database is a CSV, with particular format needed
+//! for each column, and in a specific layout. The particulars are outlined
+//! in the README accompanying the repository <a href="https://github.com/Euphrasiologist/floral">here</a>.
+//!
+//! A couple of things! The current form of this code base is geared to a CLI, with not much of the
+//! `floral` API exposed, or useful for re-use. This might change in the future.
+//!
+//! This is just a personal side project. Please do get involved and use if it is useful!
+
+use crate::{
+    explain::ExplainFloralFormula,
+    floral::{FlowerType, Formula},
+};
 use error::Result;
 use std::cmp;
 
+/// An error module to encompass the main errors that might occur when parsing, or
+/// attempting to display a floral formula.
 pub mod error;
+/// A work in progress to implement an explain trait for each of the relevant floral
+/// parts.
+pub mod explain;
+/// The main module containing all of the typed parts of a floral formula and mainly
+/// [`Display`](std::fmt::Display) implementations on each of these.
 pub mod floral;
+/// Parse the input from the database into the [`Formula`] object.
 pub mod parse;
 
 const HELP: &str = "\
@@ -23,6 +52,7 @@ ARGS:
   <STRING>              Flowering plant order/family name 
 ";
 
+/// Parse the command line arguments, and execute the application.
 pub fn parse_args() -> Result<()> {
     let mut pargs = pico_args::Arguments::from_env();
 
@@ -43,13 +73,14 @@ pub fn parse_args() -> Result<()> {
         data.keys().map(|(_, f, _)| f.to_string()).collect()
     };
 
-    let input_str = match pargs.free_from_str::<String>() {
+    let input_str: Result<String> = match pargs.free_from_str::<String>() {
         Ok(input_s) => Ok(input_s),
-        Err(err) => {
+        Err(_) => {
             if cli_all {
                 Ok("".into()) // don't matter what this string is, it isn't used
             } else {
-                Err(err)
+                print!("{}", HELP);
+                std::process::exit(0);
             }
         }
     };
@@ -63,27 +94,36 @@ pub fn parse_args() -> Result<()> {
             std::process::exit(0);
         }
 
-        let format_formula =
-            |order: &str, family: String, ft: FlowerType, formula: Formula| -> String {
+        let format_formula = |order: &str,
+                              family: String,
+                              ft: FlowerType,
+                              formula: Formula,
+                              explain: bool|
+         -> String {
+            if explain {
+                let explained = formula.explain();
+                format!("{order} -> {family}\n{explained}")
+            } else {
                 format!("{order} -> {family} -> {ft}\n{formula}")
-            };
+            }
+        };
 
         for ((order, family, ft), formula) in data {
             if cli_all {
                 let family = some_kind_of_uppercase_first_letter(family);
-                let formatted = format_formula(order, family, ft, formula);
+                let formatted = format_formula(order, family, ft, formula, cli_explain);
                 println!("{}\n", formatted);
                 continue;
             }
             if cli_order {
                 if fo_string == order {
                     let family = some_kind_of_uppercase_first_letter(family);
-                    let formatted = format_formula(order, family, ft, formula);
+                    let formatted = format_formula(order, family, ft, formula, cli_explain);
                     println!("{}\n", formatted);
                 }
             } else if fo_string == family {
                 let family = some_kind_of_uppercase_first_letter(family);
-                let formatted = format_formula(order, family, ft, formula);
+                let formatted = format_formula(order, family, ft, formula, cli_explain);
                 println!("{}\n", formatted);
             }
         }

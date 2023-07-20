@@ -4,13 +4,6 @@ use std::str::FromStr;
 
 use crate::error::{Error, ErrorKind};
 
-/// If the user wants an explanation of the floral parts
-trait ExplainFloralFormula {
-    /// The only method in this trait is to explain the
-    /// input as a string
-    fn explain(&self) -> String;
-}
-
 /// The type of flower we're looking at
 #[derive(PartialEq, Hash, Eq, PartialOrd, Ord)]
 pub enum FlowerType {
@@ -20,18 +13,6 @@ pub enum FlowerType {
     Carpellate,
     /// Male only parts
     Staminate,
-}
-
-impl ExplainFloralFormula for FlowerType {
-    fn explain(&self) -> String {
-        let flower_type = match self {
-            FlowerType::Bisexual => "bisexual",
-            FlowerType::Carpellate => "carpellate",
-            FlowerType::Staminate => "staminate",
-        };
-
-        format!("A {} flower", flower_type)
-    }
 }
 
 impl Display for FlowerType {
@@ -165,7 +146,7 @@ impl FromStr for Symmetry {
 
 /// The number of parts in a floral organ.
 /// Infinity, is something like > 30.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FloralPartNumber {
     /// A finite value
     Finite(u32),
@@ -231,6 +212,14 @@ impl Adnation {
         if let Some(e) = self.parts.as_mut() {
             e.push(part)
         }
+    }
+    /// Get the variation
+    pub fn get_variation(self) -> bool {
+        self.variation
+    }
+    /// Get the parts
+    pub fn get_parts(self) -> Option<Vec<Part>> {
+        self.parts
     }
 }
 
@@ -309,8 +298,41 @@ impl Formula {
             adnation: self.adnation,
         }
     }
+    /// Whether the formula has adnation at all
     pub fn has_adnation(&self) -> bool {
         self.adnation.parts.is_some()
+    }
+    /// Get the symmetry
+    pub fn get_symmetry(&self) -> &Vec<Symmetry> {
+        &self.symmetry
+    }
+    /// Get tepals
+    pub fn get_tepals(&self) -> &Option<FloralPart> {
+        &self.tepals
+    }
+    /// Get sepals
+    pub fn get_sepals(&self) -> &Option<FloralPart> {
+        &self.sepals
+    }
+    /// Get petals
+    pub fn get_petals(&self) -> &Option<FloralPart> {
+        &self.petals
+    }
+    /// Get stamens
+    pub fn get_stamens(&self) -> &Option<FloralPart> {
+        &self.stamens
+    }
+    /// Get carpels
+    pub fn get_carpels(&self) -> &Option<FloralPart> {
+        &self.carpels
+    }
+    /// Get fruit
+    pub fn get_fruit(&self) -> &Vec<Fruit> {
+        &self.fruit
+    }
+    /// Get adnation
+    pub fn get_adnation(&self) -> &Adnation {
+        &self.adnation
     }
 }
 
@@ -471,7 +493,6 @@ impl Display for Formula {
                 if floral_part.connate {
                     format_index += 1;
                     adnation_status.set_adnation_status(part, format_index);
-                    format_index -= 1;
                 } else {
                     adnation_status.set_adnation_status(part, format_index);
                 }
@@ -698,7 +719,7 @@ impl Display for Part {
 }
 
 /// Sterility status of an organ.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Sterile {
     Fertile,
     Sterile,
@@ -829,13 +850,34 @@ impl FloralPart {
     pub fn set_connation_variation(&mut self, connation_variation: bool) {
         self.connation_variation = connation_variation;
     }
+    /// Set the status of the ovary for the floral part
     pub fn set_ovary(&mut self, ovary: Option<Ovary>) {
         self.ovary = ovary;
+    }
+    /// Get the floral part in question
+    pub fn get_part(&self) -> Part {
+        self.part.clone()
+    }
+    /// Get the value of connation
+    pub fn get_connation(&self) -> bool {
+        self.connate
+    }
+    /// Get the value of the connation variation
+    pub fn get_connation_variation(&self) -> bool {
+        self.connation_variation
+    }
+    /// Get the value of the whorls
+    pub fn get_whorls(&self) -> Vec<Whorl> {
+        self.whorls.clone()
+    }
+    /// Get the value of the ovary
+    pub fn get_ovary(&self) -> Option<Ovary> {
+        self.ovary
     }
 }
 
 /// A part of a floral organ, within the same part
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Whorl {
     /// The number of floral parts (if there is no range)
     number: Option<FloralPartNumber>,
@@ -862,6 +904,22 @@ impl Whorl {
             max,
             sterile,
         }
+    }
+    /// Get the number
+    pub fn get_number(&self) -> &Option<FloralPartNumber> {
+        &self.number
+    }
+    /// Get the min
+    pub fn get_min(&self) -> &Option<FloralPartNumber> {
+        &self.min
+    }
+    /// Get the max
+    pub fn get_max(&self) -> &Option<FloralPartNumber> {
+        &self.max
+    }
+    /// Get sterility
+    pub fn get_sterility(&self) -> &Sterile {
+        &self.sterile
     }
 }
 
@@ -941,7 +999,7 @@ impl FloralPart {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::Formula;
 
     fn floral_from_test_str(s: &str) -> Formula {
         let line_element = s.split(',').collect::<Vec<&str>>();
@@ -967,7 +1025,7 @@ mod tests {
     fn test_1() {
         // a simple case
         // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
-        let floral_string = "Amborellales,amborellaceae,s,g,8-11,-,-,inf,0,-,-,-";
+        let floral_string = "Amborellales,amborellaceae,s,s,8-11,-,-,inf,0,-,-,-";
         let fs = floral_from_test_str(floral_string);
         assert_eq!(fs.to_string(), "↻,T8-11,A∞,G0;no fruit")
     }
