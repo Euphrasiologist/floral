@@ -11,14 +11,14 @@ pub trait ExplainFloralFormula {
 impl ExplainFloralFormula for BilateralType {
     fn explain(&self) -> String {
         match self {
-            BilateralType::Up => format!("upwards bilateral symmetry (X({}))", self),
-            BilateralType::Down => format!("downward bilateral symmetry (X({}))", self),
-            BilateralType::Left => format!("left bilateral symmetry (X({}))", self),
-            BilateralType::Right => format!("right bilateral symmetry (X({}))", self),
-            BilateralType::Upleft => format!("up and left bilateral symmetry (X({}))", self),
-            BilateralType::Upright => format!("up and right bilateral symmetry (X({}))", self),
-            BilateralType::Downleft => format!("down and left bilateral symmetry (X({}))", self),
-            BilateralType::Downright => format!("down and right bilateral symmetry (X({}))", self),
+            BilateralType::Up => format!("upwards bilateral (X({}))", self),
+            BilateralType::Down => format!("downward bilateral (X({}))", self),
+            BilateralType::Left => format!("left bilateral (X({}))", self),
+            BilateralType::Right => format!("right bilateral (X({}))", self),
+            BilateralType::Upleft => format!("up and left bilateral (X({}))", self),
+            BilateralType::Upright => format!("up and right bilateral (X({}))", self),
+            BilateralType::Downleft => format!("down and left bilateral (X({}))", self),
+            BilateralType::Downright => format!("down and right bilateral (X({}))", self),
         }
     }
 }
@@ -84,11 +84,11 @@ impl ExplainFloralFormula for Ovary {
 impl ExplainFloralFormula for Part {
     fn explain(&self) -> String {
         match self {
-            Part::Tepals => "tepals (undifferentiated perianth)".into(),
-            Part::Calyx => "calyx (or sepals)".into(),
-            Part::Petals => "petals (or corolla)".into(),
-            Part::Stamens => "stamens (androecium; male reproductive part)".into(),
-            Part::Carpels => "carpels (gynoecium; female reproductive part)".into(),
+            Part::Tepals => "tepals".into(),
+            Part::Calyx => "calyx".into(),
+            Part::Petals => "petals".into(),
+            Part::Stamens => "stamens".into(),
+            Part::Carpels => "carpels)".into(),
         }
     }
 }
@@ -157,7 +157,7 @@ impl ExplainFloralFormula for FloralPart {
         let mut whorls_string = String::new();
         for (mut idx, whorl) in whorls.iter().enumerate() {
             idx += 1;
-            whorls_string += "Whorl ";
+            whorls_string += "\tWhorl ";
             whorls_string += &idx.to_string();
             whorls_string += ": ";
             whorls_string += &whorl.explain();
@@ -168,7 +168,7 @@ impl ExplainFloralFormula for FloralPart {
             Part::Carpels => {
                 let ovary = self.get_ovary();
                 match ovary {
-                    Some(o) => format!("Whorl has {}", o.explain()),
+                    Some(o) => format!("\tWhorl has {}", o.explain()),
 
                     None => "".into(),
                 }
@@ -251,9 +251,9 @@ impl ExplainFloralFormula for Formula {
             .iter()
             .map(|e| e.explain())
             .collect::<Vec<String>>()
-            .join("\n");
+            .join("\n\t");
 
-        let fruit_string = format!("Fruit:\n{}", fruit_string_inner);
+        let fruit_string = format!("Fruit(s):\n\t{}", fruit_string_inner);
         let adnation_string = adnation.explain();
 
         let out = format!(
@@ -278,7 +278,7 @@ Explanation of floral formula above:
             fruits = fruit_string,
             adnation = adnation_string
         );
-        let wrapped = textwrap::wrap(&out, 80);
+        let wrapped = textwrap::wrap(&out, 70);
 
         wrapped.join("\n")
     }
