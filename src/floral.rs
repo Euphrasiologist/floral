@@ -150,6 +150,8 @@ impl FromStr for Symmetry {
 pub enum FloralPartNumber {
     /// A finite value
     Finite(u32),
+    /// A fractional value, only 0.5 supported
+    Fractional(f64),
     /// A value > 30.
     Infinite,
 }
@@ -158,13 +160,18 @@ impl FromStr for FloralPartNumber {
     type Err = Error;
 
     fn from_str(s: &str) -> result::Result<Self, Self::Err> {
+        // special cases
         if s == "-" || s.is_empty() {
-            return Ok(FloralPartNumber::Finite(0));
+            return Ok(Self::Finite(0));
         }
         if s == "inf" {
-            return Ok(FloralPartNumber::Infinite);
+            return Ok(Self::Infinite);
+        }
+        if s == "0.5" {
+            return Ok(Self::Fractional(0.5));
         }
 
+        // all the integers
         let num = match s.parse::<u32>() {
             Ok(n) => n,
             Err(err) => return Err(Error::new(ErrorKind::ParseInt(err))),
@@ -182,6 +189,7 @@ impl Display for FloralPartNumber {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FloralPartNumber::Finite(u) => write!(f, "{}", u),
+            FloralPartNumber::Fractional(_) => write!(f, "½"),
             FloralPartNumber::Infinite => write!(f, "∞"),
         }
     }
@@ -888,6 +896,10 @@ pub struct Whorl {
     /// The sterility status of a floral part.
     /// Weirdly I guess this applies to tepals/petals too
     sterile: Sterile,
+    /// Connation
+    connation: bool,
+    /// Connation variation
+    connation_variation: bool,
 }
 
 impl Whorl {
@@ -896,13 +908,22 @@ impl Whorl {
         number: Option<FloralPartNumber>,
         min: Option<FloralPartNumber>,
         max: Option<FloralPartNumber>,
-        sterile: Sterile,
+        sterile: bool,
+        connation: bool,
+        connation_variation: bool,
     ) -> Self {
+        let sterile = match sterile {
+            true => Sterile::Sterile,
+            false => Sterile::Fertile,
+        };
+
         Self {
             number,
             min,
             max,
             sterile,
+            connation,
+            connation_variation,
         }
     }
     /// Get the number
@@ -921,8 +942,17 @@ impl Whorl {
     pub fn get_sterility(&self) -> &Sterile {
         &self.sterile
     }
+    /// Get connation
+    pub fn get_connation(&self) -> bool {
+        self.connation
+    }
+    /// Get connation variation
+    pub fn get_connation_variation(&self) -> bool {
+        self.connation_variation
+    }
 }
 
+// TODO: impl connation and connation variation here.
 impl Display for Whorl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let number_op = self.number.is_some();
@@ -944,7 +974,14 @@ impl Display for Whorl {
             Sterile::Sterile => format!("{}", Sterile::Sterile),
         };
 
-        write!(f, "{}{}", number_or_range, sterile)
+        let whorl = format!("{}{}", number_or_range, sterile);
+
+        match (self.connation, self.connation_variation) {
+            (true, true) => write!(f, "({}]", whorl),
+            (true, false) => write!(f, "({})", whorl),
+            (false, true) => panic!("can't have connation variation with no connation"),
+            (false, false) => write!(f, "{}", whorl),
+        }
     }
 }
 
@@ -1054,7 +1091,7 @@ mod tests {
     fn test_4() {
         // with some adnation between floral parts and fusion within
         // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
-        let floral_string = "test4,test4,b,r,2;f,-,-,2;f,2;f,i,berry,T;A;G";
+        let floral_string = "test4,test4,b,r,2;c,-,-,2;c,2;c,i,berry,T;A;G";
         let fs = floral_from_test_str(floral_string);
         assert_eq!(
             fs.to_string(),
@@ -1068,7 +1105,7 @@ mod tests {
         // with some adnation between floral parts and fusion within
         // and extra whorls, in this case, 5 staminodes
         // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
-        let floral_string = "test5,test5,b,r,2;f,-,-,2;5s;f,2;f,i,berry,T;A;G";
+        let floral_string = "test5,test5,b,r,2;c,-,-,2;5s;c,2;c,i,berry,T;A;G";
         let fs = floral_from_test_str(floral_string);
         assert_eq!(
             fs.to_string(),
@@ -1083,13 +1120,26 @@ mod tests {
         // and extra whorls, in this case, 5 staminodes
         // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
         // in addition, testing all floral parts with the OR statement.
-        let floral_string = "test5,test5,b,r,2,2,2,2,2,i,berry,T;A;G";
+        let floral_string = "test6,test6,b,r,2,2,2,2,2,i,berry,T;A;G";
         let fs = floral_from_test_str(floral_string);
         assert_eq!(
             fs.to_string(),
             "\
 *,T2[or K2,C2],A2,\u{305}G2;berry
   ╰────────────┴──╯"
+        )
+    }
+    #[test]
+    fn test_7() {
+        // a simple case
+        // order, family, flower type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation
+        let floral_string = "test7,test7,s,s,8-11c,-,-,inf,0,-,-,T;G";
+        let fs = floral_from_test_str(floral_string);
+        assert_eq!(
+            fs.to_string(),
+            "\
+↻,T(8-11),A∞,G0;no fruit
+  ╰──────────╯"
         )
     }
 }

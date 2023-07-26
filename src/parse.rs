@@ -1,5 +1,8 @@
 use crate::error::Result;
-use crate::floral::*;
+use crate::floral::{
+    Adnation, FloralPart, FloralPartNumber, FlowerType, Formula, Fruit, Ovary, Part, Symmetry,
+    Whorl,
+};
 use std::collections::BTreeMap as Map;
 use std::str::FromStr;
 
@@ -132,6 +135,35 @@ fn parse_floral_part_to_enum(
     floral.set_ovary(ovary);
     floral.set_part(floral_part);
 
+    // if anything in the vec of strings contains either
+    // an s, c, or a v, we must address this here.
+    // mutate the vec at the same time to strip these attributes.
+    fn any_contains_vars(s: Vec<&str>) -> (Vec<String>, (bool, bool, bool)) {
+        let mut sterile = false;
+        let mut connate = false;
+        let mut variable = false;
+
+        let mut mutable_string_vec: Vec<String> = s.iter().map(|e| e.to_string()).collect();
+
+        // kind of ugly but works
+        for el in mutable_string_vec.iter_mut() {
+            sterile = sterile || el.contains('s');
+            if sterile {
+                *el = el.replace('s', "");
+            }
+            connate = connate || el.contains('c');
+            if connate {
+                *el = el.replace('c', "");
+            }
+            variable = variable || el.contains('v');
+            if variable {
+                *el = el.replace('v', "");
+            }
+        }
+
+        (mutable_string_vec, (sterile, connate, variable))
+    }
+
     // e.g. 2-4;f;v
     // this is the 2-4 bit
     for el in sp {
@@ -139,45 +171,35 @@ fn parse_floral_part_to_enum(
         if el.contains('-') {
             let split = el.split('-').collect::<Vec<&str>>();
 
-            if split[0].contains('s') || split[1].contains('s') {
-                // this means sterile floral part
-                // parse the left
-                let min = FloralPartNumber::from_str(&split[0].replace('s', ""))?;
-                let max = FloralPartNumber::from_str(&split[1].replace('s', ""))?;
+            let (updated_split, (sterile, connate, variable)) = any_contains_vars(split);
 
-                floral.add_whorl(Whorl::new(None, Some(min), Some(max), Sterile::Sterile));
-            } else {
-                let min = FloralPartNumber::from_str(split[0])?;
-                let max = FloralPartNumber::from_str(split[1])?;
-
-                floral.add_whorl(Whorl::new(None, Some(min), Some(max), Sterile::Fertile));
-            }
-        } else if el == "f" {
-            // f == fused
+            floral.add_whorl(Whorl::new(
+                None,
+                Some(FloralPartNumber::from_str(&updated_split[0])?),
+                Some(FloralPartNumber::from_str(&updated_split[1])?),
+                sterile,
+                connate,
+                variable,
+            ));
+        } else if el == "c" {
+            // c == connate
             floral.set_connation(true);
-            // deal with f/v, and numbers last.
-            // we got a number
         } else if el == "v" {
+            // v == variable
             floral.set_connation_variation(true);
         } else {
             // it's just a plain number
-            if el.contains('s') {
-                // it's sterile
-                floral.add_whorl(Whorl::new(
-                    Some(FloralPartNumber::from_str(&el.replace('s', ""))?),
-                    None,
-                    None,
-                    Sterile::Sterile,
-                ));
-            } else {
-                // it's fertile!
-                floral.add_whorl(Whorl::new(
-                    Some(FloralPartNumber::from_str(el)?),
-                    None,
-                    None,
-                    Sterile::Fertile,
-                ));
-            }
+            let el_single_vec = vec![el];
+            let (updated_vec, (sterile, connate, variable)) = any_contains_vars(el_single_vec);
+
+            floral.add_whorl(Whorl::new(
+                Some(FloralPartNumber::from_str(&updated_vec[0])?),
+                None,
+                None,
+                sterile,
+                connate,
+                variable,
+            ));
         }
     }
 

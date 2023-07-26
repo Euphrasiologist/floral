@@ -45,11 +45,10 @@ FLAGS:
   -h, --help            Prints help information
   -a, --all             Print all family information
   -e, --explain         Explain the floral formula
-  -c, --compact         Print compact output
   -o, --order           Search plant orders, not families
 
 ARGS:
-  <STRING>              Flowering plant order/family name 
+  <STRING>              Flowering plant family/order (with -o) name 
 ";
 
 /// Parse the command line arguments, and execute the application.
@@ -63,7 +62,6 @@ pub fn parse_args() -> Result<()> {
 
     let cli_all = pargs.contains(["-a", "--all"]);
     let cli_explain = pargs.contains(["-e", "--explain"]);
-    let cli_compact = pargs.contains(["-c", "--compact"]);
     let cli_order = pargs.contains(["-o", "--order"]);
 
     let data = parse::parse_data()?;

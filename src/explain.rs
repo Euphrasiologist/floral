@@ -27,6 +27,7 @@ impl ExplainFloralFormula for FloralPartNumber {
     fn explain(&self) -> String {
         match self {
             FloralPartNumber::Finite(num) => format!("{}", num),
+            FloralPartNumber::Fractional(_) => "½".into(),
             FloralPartNumber::Infinite => "infinite".into(),
         }
     }
@@ -88,7 +89,7 @@ impl ExplainFloralFormula for Part {
             Part::Calyx => "calyx".into(),
             Part::Petals => "petals".into(),
             Part::Stamens => "stamens".into(),
-            Part::Carpels => "carpels)".into(),
+            Part::Carpels => "carpels".into(),
         }
     }
 }
@@ -245,7 +246,7 @@ impl ExplainFloralFormula for Formula {
         let sepal_string = explain_floral_part(sepals);
         let petal_string = explain_floral_part(petals);
         let stamen_string = explain_floral_part(stamens);
-        let carpel_stirng = explain_floral_part(carpels);
+        let carpel_string = explain_floral_part(carpels);
 
         let fruit_string_inner = fruits
             .iter()
@@ -274,7 +275,7 @@ Explanation of floral formula above:
             sepals = sepal_string,
             petals = petal_string,
             stamens = stamen_string,
-            carpels = carpel_stirng,
+            carpels = carpel_string,
             fruits = fruit_string,
             adnation = adnation_string
         );
