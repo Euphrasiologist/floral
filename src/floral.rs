@@ -800,7 +800,7 @@ impl FromStr for Fruit {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "achene" => Ok(Self::Achene),
+            "achene" | "achenes" => Ok(Self::Achene),
             "berry" | "berries" => Ok(Self::Berry),
             "berrylets" => Ok(Self::Berrylets),
             "capsule" | "fleshy capsule" => Ok(Self::Capsule),
