@@ -402,7 +402,8 @@ impl Display for AdnationIndex {
             self.stamens,
             self.carpels,
         ];
-        // get the character set for the andation variation drawing
+        // get the character set for
+        // the adnation variation drawing
         let character_set = if self.variation {
             Self::VARIABLE
         } else {
@@ -883,6 +884,11 @@ impl FloralPart {
         self.ovary
     }
 }
+
+// TODO: somehow in whorl, we need to add a differentiable
+// within the whorl. e.g.
+// *,K4-5,C3:2,A2:3,G(2), where the colons indicate
+// large difference within a whorl
 
 /// A part of a floral organ, within the same part
 #[derive(Debug, Clone)]

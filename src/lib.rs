@@ -35,8 +35,12 @@ pub mod floral;
 /// Parse the input from the database into the [`Formula`] object.
 pub mod parse;
 
-const HELP: &str = "\
-floral
+const VERSION: f32 = 0.1;
+
+fn generate_help_str() -> String {
+    format!(
+        "\
+floral v{}
 
 USAGE:
   floral [FLAGS] <STRING>
@@ -49,14 +53,22 @@ FLAGS:
 
 ARGS:
   <STRING>              Flowering plant family/order (with -o) name 
-";
+",
+        VERSION
+    )
+}
 
 /// Parse the command line arguments, and execute the application.
 pub fn parse_args() -> Result<()> {
     let mut pargs = pico_args::Arguments::from_env();
 
     if pargs.contains(["-h", "--help"]) {
-        print!("{}", HELP);
+        print!("{}", generate_help_str());
+        std::process::exit(0);
+    }
+
+    if pargs.contains(["-v", "--version"]) {
+        print!("floral v{}", VERSION);
         std::process::exit(0);
     }
 
@@ -77,7 +89,7 @@ pub fn parse_args() -> Result<()> {
             if cli_all {
                 Ok("".into()) // don't matter what this string is, it isn't used
             } else {
-                print!("{}", HELP);
+                print!("{}", generate_help_str());
                 std::process::exit(0);
             }
         }
