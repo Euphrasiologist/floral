@@ -22,9 +22,24 @@ It's not yet mature enough to put on crates.io/here as binaries, but I'll get to
 For example:
 
 `floral proteaceae` will print all floral formulae associated with the family Proteaceae.
+
 `floral -o proteales` will print all floral formulae associated with the order Proteales.
+
 `floral -e proteaceae` will hopefully give a reasonably good explanation of the floral formula associated with the Proteales.
+
 `floral -a` will print all floral formulae in the database.
+
+And an example output here (Orchidaceae):
+
+```
+# run with 'floral orchidaceae'
+
+Asparagales -> Orchidaceae -> Bisexual
+X(↑),T5+1,A1-2,̅G3;capsule
+          ╰────╯
+```
+
+And general usage:
 
 ```
 floral v0.1
