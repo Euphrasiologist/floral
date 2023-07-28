@@ -27,12 +27,6 @@ impl Error {
     }
 }
 
-// impl From<ParseIntError> for Error {
-//     fn from(err: ParseIntError) -> Self {
-//         Error::new(ErrorKind::ParseInt(err))
-//     }
-// }
-
 impl From<PicoError> for Error {
     fn from(err: PicoError) -> Self {
         Error::new(ErrorKind::Cli(err))
