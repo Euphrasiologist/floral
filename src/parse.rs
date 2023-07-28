@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::error::{Error, ErrorKind, Result};
 use crate::floral::{
     Adnation, FloralPart, FloralPartNumber, FlowerType, Formula, Fruit, Ovary, Part, Symmetry,
     Whorl,
@@ -14,9 +14,10 @@ pub fn parse_data<'a>() -> Result<Map<(&'a str, &'a str, FlowerType), Formula>> 
     // skip headers
     let lines = DATA.lines().skip(1);
     let mut data_map = Map::new();
-    for line in lines {
+    for (mut line_no, line) in lines.enumerate() {
+        line_no += 2;
         // this is technically a csv parser, but I don't really want the overhead of a
-        // fully blown csv parser yet (e.g. csv crate), though it would be nice for errors.
+        // fully blown csv parser yet (e.g. csv crate), though it would be nicer for errors.
         let line_elements = line.split(',').collect::<Vec<&str>>();
 
         if let [order, family, flower_type, symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation] =
@@ -24,8 +25,19 @@ pub fn parse_data<'a>() -> Result<Map<(&'a str, &'a str, FlowerType), Formula>> 
         {
             let floral = floral_from_str(
                 symmetry, tepals, calyx, petals, anthers, carpels, ovary, fruit, adnation,
-            )?;
-            let ft = FlowerType::from_str(flower_type)?;
+            )
+            .map_err(|e| {
+                Error::new(ErrorKind::CSVParseError(format!(
+                    "At line {} - {}",
+                    line_no, e
+                )))
+            })?;
+            let ft = FlowerType::from_str(flower_type).map_err(|e| {
+                Error::new(ErrorKind::CSVParseError(format!(
+                    "At line {} - {}",
+                    line_no, e
+                )))
+            })?;
             data_map.insert((*order, *family, ft), floral);
         }
     }

@@ -174,7 +174,12 @@ impl FromStr for FloralPartNumber {
         // all the integers
         let num = match s.parse::<u32>() {
             Ok(n) => n,
-            Err(err) => return Err(Error::new(ErrorKind::ParseInt(err))),
+            Err(err) => {
+                return Err(Error::new(ErrorKind::ParseInt(format!(
+                    "{}. Found \"{}\", expected a number",
+                    err, s
+                ))))
+            }
         };
 
         // TODO: is this right?

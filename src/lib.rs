@@ -49,6 +49,7 @@ FLAGS:
   -h, --help            Prints help information
   -a, --all             Print all family information
   -e, --explain         Explain the floral formula
+  -v, --version         Print version information only
   -o, --order           Search plant orders, not families
 
 ARGS:

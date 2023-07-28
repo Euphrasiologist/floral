@@ -1,5 +1,4 @@
 // error handling
-use std::num::ParseIntError;
 use std::{error::Error as StdError, fmt, result};
 
 use pico_args::Error as PicoError;
@@ -28,11 +27,11 @@ impl Error {
     }
 }
 
-impl From<ParseIntError> for Error {
-    fn from(err: ParseIntError) -> Self {
-        Error::new(ErrorKind::ParseInt(err))
-    }
-}
+// impl From<ParseIntError> for Error {
+//     fn from(err: ParseIntError) -> Self {
+//         Error::new(ErrorKind::ParseInt(err))
+//     }
+// }
 
 impl From<PicoError> for Error {
     fn from(err: PicoError) -> Self {
@@ -45,7 +44,8 @@ impl From<PicoError> for Error {
 pub enum ErrorKind {
     ParseError(String),
     FromStr(String),
-    ParseInt(ParseIntError),
+    ParseInt(String),
+    CSVParseError(String),
     Cli(PicoError),
 }
 
@@ -57,6 +57,7 @@ impl fmt::Display for Error {
             ErrorKind::ParseError(err) => err.fmt(f),
             ErrorKind::FromStr(err) => err.fmt(f),
             ErrorKind::ParseInt(ref err) => err.fmt(f),
+            ErrorKind::CSVParseError(err) => err.fmt(f),
             ErrorKind::Cli(err) => err.fmt(f),
         }
     }
