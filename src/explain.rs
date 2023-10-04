@@ -1,5 +1,5 @@
 use crate::floral::*;
-use textwrap;
+use textwrap::{self, Options};
 
 /// If the user wants an explanation of the floral parts
 pub trait ExplainFloralFormula {
@@ -248,9 +248,11 @@ impl ExplainFloralFormula for Formula {
         let stamen_string = explain_floral_part(stamens);
         let carpel_string = explain_floral_part(carpels);
 
+        // nicer format to have subsequent indents here.
+        let options = Options::new(70).subsequent_indent("\t");
         let fruit_string_inner = fruits
             .iter()
-            .map(|e| e.explain())
+            .map(|e| textwrap::wrap(&e.explain(), options.clone()).join("\n"))
             .collect::<Vec<String>>()
             .join("\n\t");
 
@@ -270,7 +272,7 @@ Explanation of floral formula above:
 
 {adnation}",
             formula = self,
-            symmetry = symmetry_string,
+            symmetry = textwrap::wrap(&symmetry_string, 70).join("\n"),
             tepals = tepal_string,
             sepals = sepal_string,
             petals = petal_string,
@@ -279,8 +281,7 @@ Explanation of floral formula above:
             fruits = fruit_string,
             adnation = adnation_string
         );
-        let wrapped = textwrap::wrap(&out, 70);
 
-        wrapped.join("\n")
+        out
     }
 }
