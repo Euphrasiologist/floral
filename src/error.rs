@@ -41,6 +41,7 @@ pub enum ErrorKind {
     ParseInt(String),
     CSVParseError(String),
     Cli(PicoError),
+    GenericCli(String),
 }
 
 impl StdError for Error {}
@@ -53,6 +54,7 @@ impl fmt::Display for Error {
             ErrorKind::ParseInt(ref err) => err.fmt(f),
             ErrorKind::CSVParseError(err) => err.fmt(f),
             ErrorKind::Cli(err) => err.fmt(f),
+            ErrorKind::GenericCli(err) => err.fmt(f),
         }
     }
 }

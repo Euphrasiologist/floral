@@ -1,11 +1,11 @@
-use crate::error::Result;
+use crate::error::{Error, ErrorKind, Result};
 use crate::{
     explain::ExplainFloralFormula,
     floral::{FlowerType, Formula},
 };
 use std::cmp;
 
-const VERSION: f32 = 0.1;
+const VERSION: f32 = 0.11;
 
 fn generate_help_str() -> String {
     format!(
@@ -13,7 +13,7 @@ fn generate_help_str() -> String {
 floral v{}
 
 USAGE:
-  floral [FLAGS] <STRING>
+  floral [FLAGS] <TAXON RANK>
 
 FLAGS:
   -h, --help            Prints help information
@@ -23,7 +23,7 @@ FLAGS:
   -o, --order           Search plant orders, not families
 
 ARGS:
-  <STRING>              Flowering plant family/order (with -o) name 
+  <TAXON RANK>              Flowering plant family/order (with -o) name 
 ",
         VERSION
     )
@@ -71,11 +71,71 @@ pub fn parse_args() -> Result<()> {
     if let Some((edit_dist, fo_string)) = did_you_mean(&data_keys, &input_str) {
         // so we don't do unexpected things on the cli
         if edit_dist >= 4 && !input_str.is_empty() {
-            eprintln!("You typed {input_str}, did you mean {fo_string}? Or something else?");
-            std::process::exit(0);
+            return Err(Error::new(ErrorKind::GenericCli(format!(
+                "you typed {input_str}, did you mean {fo_string}? Or something else?"
+            ))));
         }
 
-        let format_formula = |order: &str,
+        for ((order, family, ft), formula) in data {
+            let formatter = DataFormatter::new(
+                cli_all,
+                cli_order,
+                cli_explain,
+                fo_string.clone(),
+                order.to_string(),
+                family.to_string(),
+                ft,
+                formula,
+            );
+            formatter.print();
+        }
+    }
+
+    Ok(())
+}
+
+// gather together all the data we need to print things out properly to the terminal
+struct DataFormatter {
+    cli_all: bool,
+    cli_order: bool,
+    cli_explain: bool,
+    fo_string: String,
+    order: String,
+    family: String,
+    flower_type: FlowerType,
+    formula: Formula,
+}
+
+enum CliAll {
+    Yes,
+    No,
+}
+
+impl DataFormatter {
+    fn new(
+        cli_all: bool,
+        cli_order: bool,
+        cli_explain: bool,
+        fo_string: String,
+        order: String,
+        family: String,
+        flower_type: FlowerType,
+        formula: Formula,
+    ) -> Self {
+        Self {
+            cli_all,
+            cli_order,
+            cli_explain,
+            fo_string,
+            order,
+            family,
+            flower_type,
+            formula,
+        }
+    }
+
+    fn print(&self) -> CliAll {
+        let format_formula = |order: String,
                               family: String,
                               ft: FlowerType,
                               formula: Formula,
@@ -88,29 +148,27 @@ pub fn parse_args() -> Result<()> {
                 format!("{order} -> {family} -> {ft}\n{formula}")
             }
         };
-
-        for ((order, family, ft), formula) in data {
-            if cli_all {
-                let family = some_kind_of_uppercase_first_letter(family);
-                let formatted = format_formula(order, family, ft, formula, cli_explain);
-                println!("{}\n", formatted);
-                continue;
-            }
-            if cli_order {
-                if fo_string == order {
-                    let family = some_kind_of_uppercase_first_letter(family);
-                    let formatted = format_formula(order, family, ft, formula, cli_explain);
-                    println!("{}\n", formatted);
-                }
-            } else if fo_string == family {
-                let family = some_kind_of_uppercase_first_letter(family);
-                let formatted = format_formula(order, family, ft, formula, cli_explain);
-                println!("{}\n", formatted);
-            }
+        let family = some_kind_of_uppercase_first_letter(&self.family);
+        let formatted = format_formula(
+            self.order.clone(),
+            family,
+            self.flower_type,
+            self.formula.clone(),
+            self.cli_explain,
+        );
+        if self.cli_all {
+            println!("{}\n", formatted);
+            return CliAll::Yes;
         }
+        if self.cli_order {
+            if self.fo_string == self.order {
+                println!("{}\n", formatted);
+            }
+        } else if self.fo_string == self.family {
+            println!("{}\n", formatted);
+        }
+        CliAll::No
     }
-
-    Ok(())
 }
 
 fn did_you_mean(possibilities: &[String], tried: &str) -> Option<(usize, String)> {

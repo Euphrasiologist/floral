@@ -5,7 +5,7 @@ use std::str::FromStr;
 use crate::error::{Error, ErrorKind};
 
 /// The type of flower we're looking at
-#[derive(PartialEq, Hash, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Hash, Eq, PartialOrd, Ord, Copy, Clone)]
 pub enum FlowerType {
     /// Bisexual or perfect flowers
     Bisexual,
@@ -42,7 +42,7 @@ impl FromStr for FlowerType {
 }
 
 /// The floral symmetry of a flower
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Symmetry {
     /// Infinitely many symmetries
     Radial,
@@ -59,7 +59,7 @@ pub enum Symmetry {
 }
 
 /// The specific kind of bilateral symmetry
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum BilateralType {
     Up,
     Down,
@@ -237,7 +237,7 @@ impl Adnation {
 }
 
 /// The total floral formula
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Formula {
     /// Floral symmetry
     symmetry: Vec<Symmetry>,
@@ -414,7 +414,7 @@ impl Display for AdnationIndex {
         } else {
             Self::CONSTANT
         };
-        // TODO: these should be ordered already... but maybe check this?
+
         let merged_only_some: Vec<_> = merged.into_iter().flatten().collect();
 
         match merged_only_some.len() {
@@ -484,7 +484,7 @@ impl Display for Formula {
         // plus one for comma in first element
         let mut format_index = sym.chars().count() + 1;
 
-        let adnation_vec = self.adnation.parts.clone().unwrap_or(vec![]);
+        let adnation_vec = self.adnation.parts.clone().unwrap_or_default();
         let mut adnation_status = AdnationIndex::default();
         // set the adnation status. This is a really horrible way
         // of handing that info on, but oh well.
@@ -749,7 +749,7 @@ impl Display for Sterile {
 }
 
 /// All the different fruit types. A growing list.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Fruit {
     Achene,
     Berry,
@@ -835,7 +835,7 @@ impl FromStr for Fruit {
 }
 
 /// An individual floral part
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FloralPart {
     /// Either the calyx, petals, stamens
     /// or carpels

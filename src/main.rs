@@ -6,7 +6,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     match parse_args() {
         Ok(_) => (),
         Err(err) => {
-            eprintln!("Error: {}", err);
+            eprintln!("floral error: {}", err);
             std::process::exit(1);
         }
     }
