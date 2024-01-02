@@ -28,13 +28,13 @@ pub fn parse_data<'a>() -> Result<Map<(&'a str, &'a str, FlowerType), Formula>> 
             )
             .map_err(|e| {
                 Error::new(ErrorKind::CSVParseError(format!(
-                    "At line {} - {}",
+                    "at line {} - {}",
                     line_no, e
                 )))
             })?;
             let ft = FlowerType::from_str(flower_type).map_err(|e| {
                 Error::new(ErrorKind::CSVParseError(format!(
-                    "At line {} - {}",
+                    "at line {} - {}",
                     line_no, e
                 )))
             })?;

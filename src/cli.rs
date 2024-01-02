@@ -16,14 +16,18 @@ USAGE:
   floral [FLAGS] <TAXON RANK>
 
 FLAGS:
+        
+  GENERAL FLAGS:
+  
   -h, --help            Prints help information
   -a, --all             Print all family information
   -e, --explain         Explain the floral formula
   -v, --version         Print version information only
   -o, --order           Search plant orders, not families
+  -d, --data            Return data for plant taxon rank
 
 ARGS:
-  <TAXON RANK>              Flowering plant family/order (with -o) name 
+  <TAXON RANK>          Flowering plant family/order (with -o) name 
 ",
         VERSION
     )
@@ -46,6 +50,7 @@ pub fn parse_args() -> Result<()> {
     let cli_all = pargs.contains(["-a", "--all"]);
     let cli_explain = pargs.contains(["-e", "--explain"]);
     let cli_order = pargs.contains(["-o", "--order"]);
+    let print_data = pargs.contains(["-d", "--data"]);
 
     let data = crate::parse::parse_data()?;
     let data_keys: Vec<_> = if cli_order {
@@ -66,28 +71,51 @@ pub fn parse_args() -> Result<()> {
         }
     };
 
-    let input_str = input_str?;
+    let rest = pargs.finish();
+    let mut input = vec![input_str?];
 
-    if let Some((edit_dist, fo_string)) = did_you_mean(&data_keys, &input_str) {
-        // so we don't do unexpected things on the cli
-        if edit_dist >= 4 && !input_str.is_empty() {
-            return Err(Error::new(ErrorKind::GenericCli(format!(
-                "you typed {input_str}, did you mean {fo_string}? Or something else?"
-            ))));
+    let inputs = match rest.is_empty() {
+        true => input,
+        false => {
+            let mut rest: Vec<String> = rest
+                .into_iter()
+                .map(|e| e.into_string().unwrap_or_default())
+                .collect();
+
+            input.append(&mut rest);
+            input
         }
+    };
 
-        for ((order, family, ft), formula) in data {
-            let formatter = DataFormatter::new(
-                cli_all,
-                cli_order,
-                cli_explain,
-                fo_string.clone(),
-                order.to_string(),
-                family.to_string(),
-                ft,
-                formula,
-            );
-            formatter.print();
+    if print_data {
+        println!("order\tfamily\tflower_type\tsymmetry\ttepals\tsepals\tpetals\tstamens\tcarpels\tfruit\n");
+    }
+    for input_str in inputs.clone().into_iter() {
+        if let Some((edit_dist, fo_string)) = did_you_mean(&data_keys, &input_str) {
+            // so we don't do unexpected things on the cli
+            if edit_dist >= 4 && !input_str.is_empty() {
+                return Err(Error::new(ErrorKind::GenericCli(format!(
+                    "you typed {input_str}, did you mean {fo_string}? Or something else?"
+                ))));
+            }
+
+            for ((order, family, ft), formula) in data.clone().into_iter() {
+                let formatter = DataFormatter::new(
+                    cli_all,
+                    cli_order,
+                    cli_explain,
+                    fo_string.clone(),
+                    order.to_string(),
+                    family.to_string(),
+                    ft,
+                    formula,
+                );
+                if print_data {
+                    formatter.print_tsv();
+                } else {
+                    formatter.print();
+                }
+            }
         }
     }
 
@@ -106,12 +134,8 @@ struct DataFormatter {
     formula: Formula,
 }
 
-enum CliAll {
-    Yes,
-    No,
-}
-
 impl DataFormatter {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         cli_all: bool,
         cli_order: bool,
@@ -134,7 +158,7 @@ impl DataFormatter {
         }
     }
 
-    fn print(&self) -> CliAll {
+    fn print(&self) {
         let format_formula = |order: String,
                               family: String,
                               ft: FlowerType,
@@ -158,7 +182,6 @@ impl DataFormatter {
         );
         if self.cli_all {
             println!("{}\n", formatted);
-            return CliAll::Yes;
         }
         if self.cli_order {
             if self.fo_string == self.order {
@@ -167,7 +190,46 @@ impl DataFormatter {
         } else if self.fo_string == self.family {
             println!("{}\n", formatted);
         }
-        CliAll::No
+    }
+
+    fn print_tsv(&self) {
+        let mut out = String::new();
+        // sort out the variables
+        let order = &self.order;
+        let family = &self.family;
+        let flower_type = self.flower_type;
+        let symmetry = self
+            .formula
+            .get_symmetry()
+            .iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+        let tepals = self.formula.get_tepals().clone().unwrap_or_default();
+        let sepals = self.formula.get_sepals().clone().unwrap_or_default();
+        let petals = self.formula.get_petals().clone().unwrap_or_default();
+        let stamens = self.formula.get_stamens().clone().unwrap_or_default();
+        let carpels = self.formula.get_carpels().clone().unwrap_or_default();
+        let fruit = self
+            .formula
+            .get_fruit()
+            .iter()
+            .map(|e| e.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+
+        out += &format!("{order}\t{family}\t{flower_type}\t{symmetry}\t{tepals}\t{sepals}\t{petals}\t{stamens}\t{carpels}\t{fruit}");
+
+        if self.cli_all {
+            println!("{}", out);
+        }
+        if self.cli_order {
+            if self.fo_string == self.order {
+                println!("{}", out);
+            }
+        } else if self.fo_string == self.family {
+            println!("{}", out);
+        }
     }
 }
 
