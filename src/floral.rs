@@ -1020,9 +1020,9 @@ impl Display for FloralPart {
         // TODO: HERE IS WHERE THE OVARY POSITION GOES
         let part = if let Some(ovary) = self.ovary {
             match ovary {
-                Ovary::Superior => format!("{}{}", '\u{0332}', self.part),
-                Ovary::Inferior => format!("{}{}", '\u{305}', self.part),
-                Ovary::Both => format!("{}{}{}", '\u{305}', '\u{0332}', self.part),
+                Ovary::Superior => format!("{}{}", self.part, '\u{0332}'),
+                Ovary::Inferior => format!("{}{}", self.part, '\u{305}'),
+                Ovary::Both => format!("{}{}{}", self.part, '\u{305}', '\u{0332}'),
             }
         } else {
             self.part.to_string()
